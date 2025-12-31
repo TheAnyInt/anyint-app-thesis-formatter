@@ -38,20 +38,7 @@ export class LlmService {
   async parseThesisContent(content: string): Promise<ThesisData> {
     this.logger.log('Parsing thesis content with LLM...');
 
-    // Truncate content if too long to avoid token limits
-    const maxContentLength = 50000;
-    const truncatedContent =
-      content.length > maxContentLength
-        ? content.substring(0, maxContentLength) + '\n\n[内容已截断...]'
-        : content;
-
-    if (content.length > maxContentLength) {
-      this.logger.warn(
-        `Content truncated from ${content.length} to ${maxContentLength} characters`,
-      );
-    }
-
-    const prompt = this.buildPrompt(truncatedContent);
+    const prompt = this.buildPrompt(content);
 
     try {
       const response = await this.openai.chat.completions.create({
@@ -60,7 +47,7 @@ export class LlmService {
           {
             role: 'system',
             content:
-              '你是一个专业的文档解析助手，专门从学术论文中提取结构化信息。请始终返回有效的 JSON 格式。注意：章节内容请适当精简，每个章节content字段不超过2000字。',
+              '你是一个专业的文档解析助手，专门从学术论文中提取结构化信息。请始终返回有效的 JSON 格式，保留完整内容。',
           },
           {
             role: 'user',
@@ -68,7 +55,7 @@ export class LlmService {
           },
         ],
         temperature: 0.1,
-        max_tokens: 16000,
+        max_tokens: 128000,
         response_format: { type: 'json_object' },
       });
 
@@ -131,20 +118,17 @@ export class LlmService {
   "author_signature": "",
   "signature_date": "",
   "chapters": [
-    {"title": "第一章 绪论", "content": "章节内容摘要..."},
-    {"title": "第二章 文献综述", "content": "章节内容摘要..."},
-    {"title": "第三章 研究方法", "content": "章节内容摘要..."}
+    {"title": "第一章 绪论", "content": "完整章节内容..."},
+    {"title": "第二章 文献综述", "content": "完整章节内容..."},
+    {"title": "第三章 研究方法", "content": "完整章节内容..."}
   ],
-  "introduction": "绪论内容摘要...",
-  "conclusion": "结论内容摘要...",
+  "introduction": "完整绪论内容...",
+  "conclusion": "完整结论内容...",
   "references": "参考文献列表...",
   "acknowledgements": ""
 }
 
-重要提示：
-- 请保持学术语言的严谨性
-- 每个章节的 content 字段请控制在 1500 字以内，提取核心内容
-- 确保返回完整有效的 JSON 格式
+请保持学术语言的严谨性，保留完整内容，确保返回有效的 JSON 格式。
 
 论文内容：
 ${content}`;
