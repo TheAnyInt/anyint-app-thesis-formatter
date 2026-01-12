@@ -1,0 +1,202 @@
+\documentclass[UTF8,a4paper,12pt]{ctexart}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{amssymb}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{times}
+\usepackage{mathptmx}
+\usepackage{fancyhdr}
+\usepackage{booktabs}
+\usepackage[T1]{fontenc}
+\usepackage{enumerate}
+\usepackage{float}
+\usepackage{setspace}
+\usepackage{hyperref}
+\hypersetup{hidelinks}
+\usepackage{tocloft}
+\usepackage{titletoc}
+\usepackage{titlesec}
+
+% 页面版心大小
+\setlength{\textheight}{22cm}
+\setlength{\textwidth}{15cm}
+\setlength{\voffset}{-1.14cm}
+\setlength{\hoffset}{-0.57cm}
+\setlength{\headheight}{1cm}
+\setlength{\topmargin}{0cm}
+\setlength{\headsep}{1.8cm}
+\setlength{\footskip}{1.2cm}
+
+% 页眉页脚设置
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\fancypagestyle{plain}{\pagestyle{fancy}}
+\fancyhfinit{\small}
+\renewcommand{\headrulewidth}{0.5pt}
+
+% 行距
+\setlength{\baselineskip}{20pt}
+
+% 目录设置
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\titlecontents{section}[0pt]
+              {\addvspace{6pt}\filright\large\bf}
+              {\contentspush{\thecontentslabel \quad }}
+              {}{\titlerule*[8pt]{.}\contentspage}
+\setlength{\cftbeforesubsecskip}{6pt}
+\setlength{\cftsubsecindent}{1em}
+\renewcommand{\cftsubsecfont}{\normalsize}
+
+% 图表设置
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
+\renewcommand{\thefigure}{\thesection{}-\arabic{figure}}
+\renewcommand{\thetable}{\thesection{}-\arabic{table}}
+\captionsetup{font={small,bf},labelsep=quad,justification=centering}
+
+% 各级标题格式
+\ctexset{section={
+  format={\heiti \zihao{3} \bfseries \center},
+  number={第\chinese{section}章}
+}}
+\titlespacing*{\section}{0pt}{24pt}{18pt}
+\titlespacing{\subsection}{0pt}{24pt}{12pt}
+\titlespacing{\subsubsection}{0pt}{12pt}{6pt}
+\titleformat*{\subsection}{\heiti\large\bfseries}
+\titleformat*{\subsubsection}{\heiti\normalsize\bfseries}
+
+\begin{document}
+
+% ===== 封面 =====
+\thispagestyle{empty}
+\begin{center}
+\vspace*{1.5cm}
+{\zihao{-0}\heiti 上海交通大学}
+\vspace{0.8cm}
+
+{\zihao{2}\heiti 本科毕业论文}
+\vspace{2.5cm}
+
+{\zihao{2}\heiti {{{metadata.title}}} }
+\vspace{0.5cm}
+
+{{#metadata.title_en}}
+{\zihao{3} {{{metadata.title_en}}} }
+{{/metadata.title_en}}
+\vspace{3cm}
+
+{\zihao{4}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{rl}
+学生姓名： & {{{metadata.author_name}}} \\
+{{#metadata.student_id}}学生学号： & {{{metadata.student_id}}} \\{{/metadata.student_id}}
+{{#metadata.major}}专\hspace{2em}业： & {{{metadata.major}}} \\{{/metadata.major}}
+{{#metadata.supervisor}}指导教师： & {{{metadata.supervisor}}} \\{{/metadata.supervisor}}
+{{#metadata.school}}学\hspace{2em}院： & {{{metadata.school}}} \\{{/metadata.school}}
+\end{tabular}
+}
+\vspace{2.5cm}
+
+{{#metadata.date}}
+{\zihao{4} {{{metadata.date}}} }
+{{/metadata.date}}
+\end{center}
+\newpage
+
+% ===== 摘要 =====
+\pagenumbering{Roman}
+\fancyhead[L]{上海交通大学学位论文}
+\fancyhead[R]{}
+
+{{#abstract}}
+\phantomsection
+\addcontentsline{toc}{section}{摘要}
+\begin{center}
+{\zihao{3}\heiti 摘\quad 要}
+\end{center}
+\vspace{1cm}
+
+{{{abstract}}}
+
+\vspace{1cm}
+{{#keywords}}
+\noindent\textbf{关键词：}{{{keywords}}}
+{{/keywords}}
+\newpage
+{{/abstract}}
+
+% ===== 英文摘要 =====
+{{#abstract_en}}
+\phantomsection
+\addcontentsline{toc}{section}{ABSTRACT}
+\begin{center}
+{\zihao{3}\bfseries ABSTRACT}
+\end{center}
+\vspace{1cm}
+
+{{{abstract_en}}}
+
+\vspace{1cm}
+{{#keywords_en}}
+\noindent\textbf{Keywords:} {{{keywords_en}}}
+{{/keywords_en}}
+\newpage
+{{/abstract_en}}
+
+% ===== 目录 =====
+\phantomsection
+\addcontentsline{toc}{section}{目录}
+\tableofcontents
+\newpage
+
+% ===== 正文（动态章节）=====
+\pagenumbering{arabic}
+
+{{#sections}}
+{{#isLevel1}}\section{ {{{title}}} }{{/isLevel1}}
+{{#isLevel2}}\subsection{ {{{title}}} }{{/isLevel2}}
+{{#isLevel3}}\subsubsection{ {{{title}}} }{{/isLevel3}}
+{{{content}}}
+
+{{/sections}}
+
+% ===== 图表（如有）=====
+{{#figures}}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{ {{{filename}}} }
+\caption{图{{{index}}}}
+\label{ {{{label}}} }
+\end{figure}
+{{/figures}}
+
+% ===== 参考文献 =====
+{{#references}}
+\newpage
+\phantomsection
+\addcontentsline{toc}{section}{参考文献}
+\begin{center}
+{\zihao{3}\heiti 参考文献}
+\end{center}
+\vspace{1cm}
+
+{{{references}}}
+{{/references}}
+
+% ===== 致谢 =====
+{{#acknowledgements}}
+\newpage
+\phantomsection
+\addcontentsline{toc}{section}{致谢}
+\begin{center}
+{\zihao{3}\heiti 致\quad 谢}
+\end{center}
+\vspace{1cm}
+
+{{{acknowledgements}}}
+{{/acknowledgements}}
+
+\end{document}

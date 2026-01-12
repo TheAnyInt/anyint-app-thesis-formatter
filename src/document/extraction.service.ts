@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as mammoth from 'mammoth';
 import PizZip from 'pizzip';
+import { execSync } from 'child_process';
+import { v4 as uuidv4 } from 'uuid';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface ExtractedImage {
   id: string;
@@ -9,14 +13,23 @@ export interface ExtractedImage {
   contentType: string;
 }
 
+export interface ExtractedTable {
+  id: string;
+  rows: string[][];  // 2D array of cell text
+  rowCount: number;
+  colCount: number;
+}
+
 export interface ExtractionResult {
   text: string;
   images: Map<string, ExtractedImage>;
+  tables: ExtractedTable[];
 }
 
 @Injectable()
 export class ExtractionService {
   private readonly logger = new Logger(ExtractionService.name);
+  private popplerAvailable: boolean | null = null;
 
   async extractText(fileBuffer: Buffer): Promise<string> {
     const result = await this.extractContent(fileBuffer);
@@ -27,11 +40,15 @@ export class ExtractionService {
     this.logger.log('Extracting content from uploaded document...');
 
     const images = new Map<string, ExtractedImage>();
+    const tables: ExtractedTable[] = [];
     let imageCounter = 0;
 
     try {
       // First, extract images directly from the docx archive
       await this.extractImagesFromDocx(fileBuffer, images);
+
+      // Extract tables from docx
+      await this.extractTablesFromDocx(fileBuffer, tables);
 
       // Then extract text with image placeholders
       const result = await mammoth.convertToHtml(
@@ -39,7 +56,8 @@ export class ExtractionService {
         {
           convertImage: mammoth.images.imgElement((image) => {
             imageCounter++;
-            const imageId = `img_${imageCounter}`;
+            // Use same format as PDF extraction for consistency
+            const imageId = `docximg${imageCounter}`;
             const extension = image.contentType.split('/')[1] || 'png';
 
             return image.read().then((imageBuffer) => {
@@ -50,8 +68,8 @@ export class ExtractionService {
                 contentType: image.contentType,
               });
 
-              // Return a placeholder that we can find in the text
-              return { src: `{%${imageId}%}` };
+              // Return a placeholder in same format as PDF extraction
+              return { src: `[FIGURE:${imageId}]` };
             });
           }),
         },
@@ -61,10 +79,15 @@ export class ExtractionService {
       let text = result.value
         .replace(/<img[^>]*src=["']([^"']+)["'][^>]*>/g, '\n$1\n')
         .replace(/<[^>]+>/g, '')
+        // Decode all HTML entities
         .replace(/&nbsp;/g, ' ')
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+        .replace(/&#x([0-9a-fA-F]+);/g, (_, code) => String.fromCharCode(parseInt(code, 16)))
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 
@@ -75,10 +98,10 @@ export class ExtractionService {
       }
 
       this.logger.log(
-        `Extracted ${text.length} characters and ${images.size} images`,
+        `Extracted ${text.length} characters, ${images.size} images, ${tables.length} tables`,
       );
 
-      return { text, images };
+      return { text, images, tables };
     } catch (error) {
       this.logger.error('Failed to extract content from document', error);
       throw new Error(
@@ -131,5 +154,245 @@ export class ExtractionService {
       webp: 'image/webp',
     };
     return types[extension.toLowerCase()] || 'image/png';
+  }
+
+  private async extractTablesFromDocx(
+    fileBuffer: Buffer,
+    tables: ExtractedTable[],
+  ): Promise<void> {
+    try {
+      const zip = new PizZip(fileBuffer);
+      const documentXml = zip.files['word/document.xml'];
+
+      if (!documentXml) {
+        this.logger.warn('No document.xml found in docx');
+        return;
+      }
+
+      const xmlContent = documentXml.asText();
+
+      // Simple regex-based table extraction from OOXML
+      // Match each table: <w:tbl>...</w:tbl>
+      const tableRegex = /<w:tbl[^>]*>([\s\S]*?)<\/w:tbl>/g;
+      let tableMatch;
+      let tableIndex = 0;
+
+      while ((tableMatch = tableRegex.exec(xmlContent)) !== null) {
+        tableIndex++;
+        const tableContent = tableMatch[1];
+        const rows: string[][] = [];
+
+        // Match each row: <w:tr>...</w:tr>
+        const rowRegex = /<w:tr[^>]*>([\s\S]*?)<\/w:tr>/g;
+        let rowMatch;
+
+        while ((rowMatch = rowRegex.exec(tableContent)) !== null) {
+          const rowContent = rowMatch[1];
+          const cells: string[] = [];
+
+          // Match each cell: <w:tc>...</w:tc>
+          const cellRegex = /<w:tc[^>]*>([\s\S]*?)<\/w:tc>/g;
+          let cellMatch;
+
+          while ((cellMatch = cellRegex.exec(rowContent)) !== null) {
+            const cellContent = cellMatch[1];
+
+            // Extract text from cell: <w:t>...</w:t>
+            const textRegex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+            let cellText = '';
+            let textMatch;
+
+            while ((textMatch = textRegex.exec(cellContent)) !== null) {
+              cellText += textMatch[1];
+            }
+
+            cells.push(cellText.trim());
+          }
+
+          if (cells.length > 0) {
+            rows.push(cells);
+          }
+        }
+
+        if (rows.length > 0) {
+          const maxCols = Math.max(...rows.map((r) => r.length));
+          tables.push({
+            id: `table_${tableIndex}`,
+            rows,
+            rowCount: rows.length,
+            colCount: maxCols,
+          });
+        }
+      }
+
+      this.logger.log(`Extracted ${tables.length} tables from document`);
+    } catch (error) {
+      this.logger.warn('Could not extract tables from docx', error);
+    }
+  }
+
+  /**
+   * 检测 Poppler 是否可用
+   */
+  private checkPopplerAvailable(): boolean {
+    if (this.popplerAvailable !== null) {
+      return this.popplerAvailable;
+    }
+    try {
+      execSync('which pdftotext', { encoding: 'utf-8' });
+      this.popplerAvailable = true;
+      this.logger.log('Poppler is available');
+    } catch {
+      this.popplerAvailable = false;
+      this.logger.warn('Poppler is not installed');
+    }
+    return this.popplerAvailable;
+  }
+
+  /**
+   * 从 PDF 文件中提取内容，保留图片位置信息（使用 PyMuPDF）
+   * 返回的 text 中包含 [FIGURE:pdfimgX] 标记
+   */
+  async extractPdfWithLayout(fileBuffer: Buffer): Promise<ExtractionResult> {
+    this.logger.log('Extracting PDF content with layout using PyMuPDF...');
+
+    const images = new Map<string, ExtractedImage>();
+    const tables: ExtractedTable[] = [];
+    const tmpId = uuidv4();
+    const tmpPdf = `/tmp/pdf-${tmpId}.pdf`;
+    const tmpDir = `/tmp/pdf-extract-${tmpId}`;
+
+    try {
+      // 写入临时 PDF 文件
+      fs.writeFileSync(tmpPdf, fileBuffer);
+      fs.mkdirSync(tmpDir, { recursive: true });
+
+      // 调用 Python 脚本
+      const scriptPath = path.join(__dirname, '../../scripts/extract_pdf.py');
+      const output = execSync(
+        `python3 "${scriptPath}" "${tmpPdf}" "${tmpDir}"`,
+        { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 },
+      );
+
+      const result = JSON.parse(output);
+
+      // 读取提取的图片
+      for (const img of result.images) {
+        const imgPath = path.join(tmpDir, img.filename);
+        if (fs.existsSync(imgPath)) {
+          const buffer = fs.readFileSync(imgPath);
+          const ext = path.extname(img.filename).slice(1) || 'png';
+          images.set(img.id, {
+            id: img.id,
+            buffer,
+            extension: ext,
+            contentType: this.getContentType(ext),
+          });
+        }
+      }
+
+      this.logger.log(
+        `Extracted ${result.text_with_images.length} chars, ${images.size} images with layout`,
+      );
+
+      // 清理临时文件
+      fs.unlinkSync(tmpPdf);
+      if (fs.existsSync(tmpDir)) {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+
+      return {
+        text: result.text_with_images,
+        images,
+        tables,
+      };
+    } catch (error) {
+      // 清理临时文件
+      if (fs.existsSync(tmpPdf)) fs.unlinkSync(tmpPdf);
+      if (fs.existsSync(tmpDir)) fs.rmSync(tmpDir, { recursive: true });
+
+      this.logger.error('Failed to extract PDF with layout', error);
+      throw new Error(
+        `PDF layout extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * 从 PDF 文件中提取内容（使用 Poppler）
+   */
+  async extractPdfContent(fileBuffer: Buffer): Promise<ExtractionResult> {
+    this.logger.log('Extracting content from PDF document...');
+
+    // 检查 Poppler 是否可用
+    if (!this.checkPopplerAvailable()) {
+      throw new Error(
+        'PDF extraction requires Poppler. Please install: brew install poppler (macOS) or apt install poppler-utils (Linux)',
+      );
+    }
+
+    const images = new Map<string, ExtractedImage>();
+    const tables: ExtractedTable[] = [];
+    const tmpId = uuidv4();
+    const tmpPdf = `/tmp/pdf-${tmpId}.pdf`;
+    const tmpImagesDir = `/tmp/pdf-images-${tmpId}`;
+
+    try {
+      // 1. 写入临时 PDF 文件
+      fs.writeFileSync(tmpPdf, fileBuffer);
+      fs.mkdirSync(tmpImagesDir, { recursive: true });
+
+      // 2. 使用 pdftotext 提取文本
+      const text = execSync(`pdftotext "${tmpPdf}" -`, { encoding: 'utf-8' })
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
+      // 3. 使用 pdfimages 提取图片
+      try {
+        execSync(`pdfimages -all "${tmpPdf}" "${tmpImagesDir}/img"`);
+
+        // 4. 读取提取的图片
+        const imageFiles = fs.readdirSync(tmpImagesDir);
+        imageFiles.forEach((filename, index) => {
+          const imgPath = path.join(tmpImagesDir, filename);
+          const buffer = fs.readFileSync(imgPath);
+          const ext = path.extname(filename).slice(1) || 'png';
+          const imageId = `pdfimg${index + 1}`;
+
+          images.set(imageId, {
+            id: imageId,
+            buffer,
+            extension: ext,
+            contentType: this.getContentType(ext),
+          });
+        });
+      } catch (imgError) {
+        this.logger.warn(
+          'Failed to extract images from PDF, continuing with text only',
+        );
+      }
+
+      this.logger.log(
+        `Extracted ${text.length} characters, ${images.size} images from PDF`,
+      );
+
+      // 5. 清理临时文件
+      fs.unlinkSync(tmpPdf);
+      if (fs.existsSync(tmpImagesDir)) {
+        fs.rmSync(tmpImagesDir, { recursive: true });
+      }
+
+      return { text, images, tables };
+    } catch (error) {
+      // 清理临时文件
+      if (fs.existsSync(tmpPdf)) fs.unlinkSync(tmpPdf);
+      if (fs.existsSync(tmpImagesDir))
+        fs.rmSync(tmpImagesDir, { recursive: true });
+
+      this.logger.error('Failed to extract content from PDF', error);
+      throw new Error(
+        `PDF extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
   }
 }

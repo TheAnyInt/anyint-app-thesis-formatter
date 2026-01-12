@@ -1,0 +1,323 @@
+\documentclass[openany,a4paper,12pt,AutoFakeBold,oneside]{ctexart}
+\usepackage[left=3cm, right=2.5cm, top=3cm, bottom=2.50cm]{geometry} %页边距
+\CTEXsetup[format={\zihao{3}\songti\bf\filcenter}]{section} %设置章标题字号为Large，居左
+\CTEXsetup[name={第,章}]{section}
+\CTEXsetup[number={\arabic{section}}]{section}
+\CTEXsetup[format={\zihao{4}\songti\bf}]{subsection}
+\CTEXsetup[format={\zihao{-4}\songti\bf}]{subsubsection}
+%\CTEXsetup[format={\Large\bfseries}]{section} %设置章标题字号为Large，居左
+%\CTEXsetup[number={\chinese{section}}]{section}
+%\CTEXsetup[name={（,）}]{subsection}
+%\CTEXsetup[number={\chinese{subsection}}]{subsection}
+%\CTEXsetup[name={（,）}]{subsubsection}
+%\CTEXsetup[number=\arabic{subsubsection}]{subsubsection}  %以上四行为各级标题样式设置，可根据需要做修改
+\setlength{\headheight}{0.8cm}
+\usepackage{setspace}
+\linespread{1.5} %设置全文行间距
+\newfontfamily{\myCalibri}{calibri.ttf}
+
+%\usepackage[english]{babel}
+%\usepackage{float}     %放弃美学排版图表
+\usepackage{fontspec}
+\usepackage{amsmath, amsfonts, amssymb, mathrsfs} % 数学公式相关宏包
+\usepackage{color}      % color content
+\usepackage{graphicx}   % 导入图片
+\usepackage{subfigure}  % 并排子图
+\usepackage{url}        % 超链接
+\usepackage{bm}         % 加粗部分公式，比如\bm{aaa}aaa
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{epstopdf}
+\usepackage{epsfig}
+\usepackage{longtable}  %长表格
+\usepackage{supertabular}%跨页表格
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{changepage}
+\usepackage{indentfirst}
+\newcommand{\upcitep}[1]{\textsuperscript{\cite{#1}}}
+\usepackage{caption}
+\DeclareCaptionFormat{myformat}{\heiti\zihao{-4} #1#2#3}
+\captionsetup{labelsep=space,format={myformat}}
+
+
+\numberwithin{equation}{section}
+\renewcommand\theequation{\thesection-\arabic{equation}}
+%%%%%%%%%%%%%%%%%%%%%%%
+% -- text font --
+% compile using Xelatex
+%%%%%%%%%%%%%%%%%%%%%%%
+% -- 中文字体 --
+%\setCJKmainfont{Microsoft YaHei}  % 微软雅黑
+%\setCJKmainfont{YouYuan}  % 幼圆
+%\setCJKmainfont{NSimSun}  % 新宋体
+%\setCJKmainfont{KaiTi}    % 楷体
+\setCJKmainfont{simsun.ttc}   % 宋体
+%\setCJKmainfont{SimHei}   % 黑体
+\usepackage{pdfpages}
+% -- 英文字体 --
+\setmainfont{Times New Roman}
+%\setmainfont{DejaVu Sans}
+%\setmainfont{Latin Modern Mono}
+%\setmainfont{Consolas}
+%
+%
+\renewcommand{\algorithmicrequire}{ \textbf{输入:}}     % use Input in the format of Algorithm
+\renewcommand{\algorithmicensure}{ \textbf{初始化:}} % use Initialize in the format of Algorithm
+\renewcommand{\algorithmicreturn}{ \textbf{输出:}}     % use Output in the format of Algorithm
+\renewcommand{\abstractname}{\heiti\zihao{4} 摘\quad 要} %更改摘要二字的样式
+%\renewcommand{\bibname}{\centerline{\zihao{4}\heiti\textbf{参考文献}}}
+%\renewcommand{\contentsname}{\fontsize{14pt}{\baselineskip}\selectfont \textbf{目\quad 录}}
+\renewcommand{\contentsname}{\centerline{\songti\bf\zihao{3} 目\quad 录}}
+\newcommand{\xiaosi}{\fontsize{12pt}{\baselineskip}\selectfont}     %\zihao{-4}代替设置12pt 字号命令,不加\selectfont,行间距设置无效
+\newcommand{\sihao}{\fontsize{14pt}{\baselineskip}}
+\newcommand{\wuhao}{\fontsize{10.5pt}{10.5pt}\selectfont}
+\newcommand{\RNum}[1]{\uppercase\expandafter{\romannumeral #1\relax}}
+\renewcommand{\baselinestretch}{1.5}
+%\newcommand{\hei}{\CJKfamily{hei}}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+
+%\lhead{\thepage}           %页眉左边设
+%\chead{}           %页眉中间
+%\rhead{}           %页眉右边
+%\rhead{\includegraphics[width=1.2cm]{1.eps}}  % 页眉右侧放置logo
+%\lfoot{}          %页脚左边
+%\cfoot{}  %页脚中间
+%\rfoot{}          %页脚右边
+
+
+%%%%%%%%%%%%%%%%%%%%%%%
+%  设置水印
+%%%%%%%%%%%%%%%%%%%%%%%
+%\usepackage{draftwatermark}         % 所有页加水印
+%\usepackage[firstpage]{draftwatermark} % 只有第一页加水印
+% \SetWatermarkText{Water-Mark}           % 设置水印内容
+% \SetWatermarkText{\includegraphics{fig/ZJDX-WaterMark.eps}}         % 设置水印logo
+% \SetWatermarkLightness{0.9}             % 设置水印透明度 0-1
+% \SetWatermarkScale{1}                   % 设置水印大小 0-1
+
+\usepackage{hyperref} %bookmarks
+\hypersetup{colorlinks, bookmarks, unicode} %unicode
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=black}
+%\setcounter{secnumdepth}{4}   %增加编号深度
+\setcounter{tocdepth}{3}	  %增加目录深度
+
+\usepackage{titletoc}
+%\titlecontents{chapter}[4em]{\songti\zihao{4}\vspace{0.25ex}}{\contentslabel{3.5em}}{\hspace*{-3.5em}}{~\titlerule*[0.3pc]{.}
+%\thecontentspage\hspace*{-2em}}
+%\titlecontents{section}[2em]{\songti\zihao{-4}\vspace{0.25ex}}{\contentslabel{2em}}{}{~\titlerule*[0.3pc]{.}
+%\thecontentspage\hspace*{-2em}}
+
+\titlecontents{section}[5.2em]{\songti\zihao{4}\vspace{0.25ex}}{\contentslabel{5em}\hspace*{-0.5cm}}{\hspace*{-5em}}{~\titlerule*[0.3pc]{$.$}~\contentspage}
+\titlecontents{subsection}[3.4em]{\songti\zihao{4}\vspace{0.25ex}}{\contentslabel{2em}}{}{~\titlerule*[0.3pc]{$.$}~\contentspage}
+\titlecontents{subsubsection}[5.7em]{\songti\zihao{4}\vspace{0.25ex}}{\contentslabel{2.7em}}{}{~\titlerule*[0.3pc]{$.$}~\contentspage}
+\titlecontents{paragraph}[11em]{\zihao{4}}{\contentslabel{4em}}{\hspace*{-2em}}{~\titlerule*[0.6pc]{$.$}~\contentspage}
+ 
+ 
+\begin{document}
+\zihao{-4}
+
+\includepdf[pages={1,2,3,4}]{cover.pdf}  
+
+\newpage
+\fancyhf{}
+\pagenumbering{Roman}
+\renewcommand{\headrulewidth}{0pt} 
+\fancyfoot[C]{\zihao{5}\thepage}
+\fancypagestyle{plain}{\pagestyle{fancy}}
+%\maketitle
+% \begin{center}
+% \heiti \zihao{4}{ }
+% \end{center}
+
+\begin{center}
+\underline{\underline{\kaishu\zihao{-2}\bf 南京大学研究生毕业论文中文摘要首页用纸}}
+\end{center}
+
+\noindent {\zihao{4}\kaishu 毕业论文题目：\underline{\hspace{12cm}} \vspace*{0.3cm}
+
+\noindent \underline{\hspace{\textwidth}}
+
+\vspace*{0.3cm}
+
+\noindent \underline{\hspace{4cm}}专业\underline{\hspace{3cm}}级硕士生姓名：\underline{\hspace{4cm}}
+
+\vspace*{0.3cm}
+
+\noindent 指导教师（姓名、职称）：\underline{\hspace{10cm}}           
+}
+
+\quad
+
+\centerline{\songti\zihao{3}\bf 摘要}
+\addcontentsline{toc}{section}{摘要}
+\vspace{12 pt}
+
+本文主要考虑和 
+\\ {\heiti 关键词：} 谐振子；Klein-Gordon方程 
+
+\newpage
+
+\begin{center}
+\underline{\underline{\kaishu\zihao{-2}\bf 南京大学研究生毕业论文中文摘要首页用纸}}
+\end{center}
+
+\vspace{12 pt}
+
+{\zihao{4}\noindent\myCalibri THESIS： 
+
+\quad
+
+\noindent SPECIALIZATION: ××××××××××××××××××
+\vspace*{0.3cm}
+
+\noindent POSTGRADUATE: ××××××××××××××××××
+\vspace*{0.3cm}
+
+\noindent MENTOR: ××××××××××××××××××
+}
+
+
+\quad
+
+\centerline{\zihao{3}{\textbf{\textrm{Abstract}}}}
+\addcontentsline{toc}{section}{Abstract}
+\vspace{12 pt}
+%\begin{center}
+%\large{\textbf{Abstract}}
+%\end{center}
+
+In this paper, 
+\\ \textbf{Keywords:} harmonic oscillator;\ \ Klein-Gordon equation
+
+%\thispagestyle{empty}       %本页不显示页码
+\newpage                    %分页
+% \tableofcontents\thispagestyle{empty}
+%\newpage
+%从下面开始编页，页脚格式为导言部分设置的格式
+{\renewcommand{\baselinestretch}{1}
+%\addcontentsline{toc}{section}{目\quad 录}
+\begin{spacing}{1.5}
+\tableofcontents
+\end{spacing}
+}
+
+\newpage
+\section*{符号及缩写语说明}
+\addcontentsline{toc}{section}{符号及缩写语说明}
+\zihao{-4}
+
+\begin{center}
+\begin{tabular}{p{2cm}p{12cm}}
+    a &  亚历山大 \\
+    b &  米开朗琪罗\\
+\end{tabular}
+\end{center}
+
+
+
+\CTEXsetup[name = {第,章},
+number={\chinese{section}}
+]{section}
+ 
+
+\newpage
+\setcounter{page}{1}
+\fancyhf{}
+\pagenumbering{arabic}
+\renewcommand{\headrulewidth}{0.8pt}
+\fancyhead[C]{\zihao{5} 学位论文题目} 
+\fancyfoot[C]{\zihao{5}\thepage} 
+\fancypagestyle{plain}{\pagestyle{fancy}}
+ 
+\section*{引\quad 言}
+\addcontentsline{toc}{section}{引\quad 言}
+偏微分方程是一个包含两个或多个变量的未知函数及其某些偏导数的方程，
+
+\newpage
+\section{绪论}
+\subsection{研究背景及研究方法}
+\subsubsection{研究方法}
+偏微分方程是一个包含两个或多个变量的未知函数及其某些偏导数的方程，这门学科产生于十八世纪，由欧拉、达朗贝尔等人研究弦振动开创，后来在十九世纪得到迅速的发展。 
+ 
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=8cm]{1.png}
+    \caption{排版} 
+    \label{fig:my_label}
+\end{figure}
+
+\begin{table}[h]
+    \centering 
+    \caption{排版} 
+    \begin{tabular}{|c|c|c|}\hline
+        111 & 1 & 2 \\ \hline
+        1 & 1 & 3 \\ \hline
+    \end{tabular} 
+    \label{tab:my_label}
+\end{table}
+
+Klein-Gordon方程，也称为Klein-Gordon-Fock方程法形式方法，第一次被应用于偏微分方程是J.Shatah在1985 年提出的。在\cite{Sha1985}中，J.Shatah 主要研究非线性Klein-Gordon方程
+\begin{equation}\label{Intro1}
+  \begin{split}
+    \square \beta \alpha u+u+f(u,D_u,D^2u)=0,\quad x\in\mathbb{R}^n,t\in\mathbb{R}
+  \end{split}
+\end{equation}
+
+
+\newpage
+\section{半线性}
+\subsection{准备工作}
+众所周知\upcitep{Niko1986}， 
+
+
+
+\newpage
+\section*{结\quad 语}
+\addcontentsline{toc}{section}{结\quad 语}
+\zihao{-4}
+我不仅系统地学习了数学专业的各类基础理论知识
+ 
+\newpage
+{\zihao{5}
+\renewcommand{\baselinestretch}{1}
+\begin{center}
+\begin{thebibliography}{99}
+\setlength{\itemsep}{-0.75ex}
+\addcontentsline{toc}{section}{参考文献}
+\bibitem{Sha1985}
+J Shatah. Normal forms and quadratic nonlinear Klein-Gordon equations[J]. Comm. Pure Appl. Math, 1985, 38(5):685-696.
+\bibitem{Niko1986}
+N V, Nikolenko. The method of Poincaré normal forms in problems of integrability of equations of evolution type[J]. Uspekhi Mat. Nauk, 1986, 41(5):109–152.
+\end{thebibliography}
+\end{center}
+}
+\newpage
+\section*{附\quad 录}
+\addcontentsline{toc}{section}{附\quad 录}
+诊断标准、纳入/排除/剔除标准等相关标准
+
+\newpage
+\section*{在校期间发表论文情况、参与课题与获奖情况}
+\addcontentsline{toc}{section}{在校期间发表论文情况、参与课题与获奖情况}
+
+\noindent\textbf{发表论文：}\\ [0pt]
+[1]张三，李四，王五，等.文章题目[J].期刊名称，2011，18（8）：166-168. \\  [10pt]
+\textbf{参与课题：}\\  [0pt]
+[1] ×××××××研究.××××××××××.2010.10-2011.10.排名第 5. \\  [10pt]
+\textbf{获得奖励：}\\  [0pt]
+[1] 张三. ××××××××××奖.广州中医药大学.排名第 5.
+
+
+\newpage
+\section*{致\quad 谢}
+\addcontentsline{toc}{section}{致\quad 谢}
+\zihao{-4}
+我不仅系统地学习了数学专业的各类基础理论知识
+ 
+
+
+\end{document}
+

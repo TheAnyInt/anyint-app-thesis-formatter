@@ -1,0 +1,365 @@
+% thesis.tex
+% 南京大学生命科学学院硕士学位论文 LaTeX 模板示例
+% Nanjing University School of Life Sciences Master's Thesis Template Example
+
+\documentclass{njulife-thesis}
+
+%% ==================== 论文信息设置 ====================
+% 学校代码（默认10284）
+\schoolcode{10284}
+
+% 分类号（中国图书分类号，查询：http://www.ztflh.com/）
+\classificationnumber{Q78}
+
+% 密级（公开、限制、秘密、机密、绝密）
+\secretlevel{公开}
+
+% UDC（国际图书分类号，查询：http://www.udcsummary.info/php/index.php?lang=chi&pr=Y）
+\udc{577.2}
+
+% 学号
+\studentid{MG1234567}
+
+% 论文题目（中文）
+\thesistitle{基于CRISPR-Cas9技术的水稻抗病基因功能研究}
+
+% 论文题目（英文）
+\thesistitleen{Functional Study of Rice Disease Resistance Genes Based on CRISPR-Cas9 Technology}
+
+% 作者姓名（中文）
+\authorname{张三}
+
+% 作者姓名（英文）
+\authornameen{Zhang San}
+
+% 专业名称（中文）
+\majorname{生物化学与分子生物学}
+
+% 专业名称（英文）
+\majornameen{Biochemistry and Molecular Biology}
+
+% 研究方向
+\researchdirection{植物分子生物学}
+
+% 导师姓名
+\supervisorname{李四}
+
+% 导师姓名（英文）
+\supervisornameen{Prof. Li Si}
+
+% 导师职称
+\supervisortitle{教授}
+
+% 论文完成时间
+\thesisyear{2025}
+\thesismonth{6}
+
+% 答辩信息
+\defensedate{2025年6月15日}
+\chairperson{王五 教授}
+\reviewers{赵六 教授、钱七 教授}
+
+%% ==================== 文档开始 ====================
+\begin{document}
+
+%% ==================== 封面 ====================
+\makecover
+
+%% ==================== 答辩信息页 ====================
+\makedefensepage
+
+%% ==================== 签名页 ====================
+\makesignaturepage
+
+%% ==================== 内封面 ====================
+\makeinnercover
+
+%% ==================== 原创性声明 ====================
+\makedeclaration
+
+%% ==================== 前置部分 ====================
+\frontmattersetup
+
+%% ==================== 目录 ====================
+\tableofcontents
+\clearpage
+
+%% ==================== 中文摘要 ====================
+% 参数为关键词，用分号分隔，最后一个关键词后不加标点
+\begin{cnabstract}{CRISPR-Cas9；水稻；抗病基因；基因编辑；功能验证}
+水稻是世界上最重要的粮食作物之一，病害严重威胁着水稻的产量和品质。传统的抗病育种方法周期长、效率低，难以满足现代农业生产的需求。CRISPR-Cas9基因编辑技术为水稻抗病基因的功能研究和分子育种提供了新的技术手段。
+
+本研究以水稻抗病基因OsRGA1为研究对象，利用CRISPR-Cas9技术对其进行定点敲除和功能验证。首先，通过生物信息学分析，确定了OsRGA1基因的结构特征和保守结构域。其次，设计并构建了靶向OsRGA1基因的CRISPR-Cas9载体，通过农杆菌介导的遗传转化方法获得了T0代转基因水稻植株。
+
+通过对转基因植株的分子检测，成功筛选出12个纯合突变体。表型分析表明，OsRGA1基因敲除突变体对稻瘟病菌的抗性显著下降，证明该基因在水稻抗病免疫反应中发挥重要作用。进一步的转录组分析揭示了OsRGA1调控的下游基因网络，包括多个与植物免疫相关的基因。
+
+本研究成功验证了OsRGA1基因的抗病功能，为水稻抗病分子育种提供了新的候选基因资源，同时也为CRISPR-Cas9技术在作物功能基因组学研究中的应用提供了参考。
+\end{cnabstract}
+
+%% ==================== 英文摘要 ====================
+\begin{enabstract}{CRISPR-Cas9; rice; disease resistance gene; gene editing; functional validation}
+Rice is one of the most important food crops in the world, and diseases seriously threaten the yield and quality of rice. Traditional disease resistance breeding methods have long cycles and low efficiency, which cannot meet the needs of modern agricultural production. CRISPR-Cas9 gene editing technology provides a new technical approach for functional studies and molecular breeding of rice disease resistance genes.
+
+In this study, we focused on the rice disease resistance gene OsRGA1 and performed targeted knockout and functional validation using CRISPR-Cas9 technology. First, through bioinformatics analysis, we determined the structural characteristics and conserved domains of the OsRGA1 gene. Second, we designed and constructed CRISPR-Cas9 vectors targeting the OsRGA1 gene, and obtained T0 generation transgenic rice plants through Agrobacterium-mediated genetic transformation.
+
+Through molecular detection of transgenic plants, 12 homozygous mutants were successfully screened. Phenotypic analysis showed that the resistance of OsRGA1 knockout mutants to rice blast fungus was significantly reduced, demonstrating that this gene plays an important role in rice disease immune response. Further transcriptome analysis revealed the downstream gene network regulated by OsRGA1, including multiple genes related to plant immunity.
+
+This study successfully validated the disease resistance function of the OsRGA1 gene, providing new candidate gene resources for molecular breeding of rice disease resistance, and also providing a reference for the application of CRISPR-Cas9 technology in crop functional genomics research.
+\end{enabstract}
+
+%% ==================== 符号及缩写语说明 ====================
+\begin{symbollist}
+\begin{longtable}{@{}ll@{}}
+\toprule
+缩写符号 & 含义 \\
+\midrule
+\endfirsthead
+\midrule
+缩写符号 & 含义 \\
+\midrule
+\endhead
+CRISPR & Clustered Regularly Interspaced Short Palindromic Repeats \\
+Cas9 & CRISPR-associated protein 9 \\
+sgRNA & Single guide RNA \\
+PAM & Protospacer Adjacent Motif \\
+HR & Homologous Recombination \\
+NHEJ & Non-Homologous End Joining \\
+PCR & Polymerase Chain Reaction \\
+qRT-PCR & Quantitative Real-Time PCR \\
+T-DNA & Transfer DNA \\
+WT & Wild Type \\
+NBS-LRR & Nucleotide Binding Site-Leucine Rich Repeat \\
+ETI & Effector-Triggered Immunity \\
+PTI & PAMP-Triggered Immunity \\
+ROS & Reactive Oxygen Species \\
+SA & Salicylic Acid \\
+JA & Jasmonic Acid \\
+\bottomrule
+\end{longtable}
+\end{symbollist}
+
+%% ==================== 正文部分 ====================
+\mainmattersetup
+
+%% ==================== 第一章 引言 ====================
+\chapter{引言}
+
+\section{研究背景}
+
+\subsection{水稻病害概述}
+水稻（\textit{Oryza sativa} L.）是世界上最重要的粮食作物之一，全球约有一半以上的人口以水稻为主食。然而，水稻生产面临着多种病害的威胁，其中稻瘟病是最具破坏性的真菌病害之一，每年造成的产量损失可达10\%-30\%，严重时甚至导致绝收。
+
+\subsection{植物抗病分子机制}
+植物的抗病免疫系统主要包括两个层次：病原相关分子模式触发的免疫反应（PTI）和效应子触发的免疫反应（ETI）。NBS-LRR类抗病基因是介导ETI的主要组分，在识别病原菌效应子后启动强烈的防御反应。
+
+\section{CRISPR-Cas9基因编辑技术}
+
+\subsection{技术原理}
+CRISPR-Cas9系统是一种高效、精确的基因编辑工具，由Cas9核酸酶和单向导RNA（sgRNA）组成。sgRNA通过碱基互补配对引导Cas9蛋白识别靶位点，在PAM序列上游进行DNA双链切割，随后通过NHEJ或HR途径完成DNA修复。
+
+\subsection{在植物基因功能研究中的应用}
+CRISPR-Cas9技术已在拟南芥、水稻、小麦、玉米等多种作物中成功应用，为基因功能研究和分子育种提供了强有力的技术手段。
+
+\section{研究目的与意义}
+本研究旨在利用CRISPR-Cas9技术对水稻抗病基因OsRGA1进行功能验证，揭示其在抗病免疫反应中的作用机制，为水稻抗病分子育种提供理论依据和基因资源。
+
+%% ==================== 第二章 材料与方法 ====================
+\chapter{材料与方法}
+
+\section{实验材料}
+
+\subsection{植物材料}
+本研究所用水稻品种为日本晴（Nipponbare），由南京大学生命科学学院水稻遗传实验室提供。
+
+\subsection{菌株与载体}
+\begin{itemize}
+    \item 大肠杆菌DH5$\alpha$：用于载体构建和质粒扩增
+    \item 农杆菌EHA105：用于水稻遗传转化
+    \item pCas9-sgRNA载体：用于CRISPR-Cas9基因编辑
+\end{itemize}
+
+\subsection{主要试剂}
+如表~\ref{tab:reagents} 所示。
+
+\begin{table}[htbp]
+\centering
+\caption{主要试剂及来源}
+\label{tab:reagents}
+\begin{tabular}{lll}
+\toprule
+试剂名称 & 规格 & 生产厂家 \\
+\midrule
+Taq DNA聚合酶 & 5 U/$\mu$L & TaKaRa \\
+T4 DNA连接酶 & 400 U/$\mu$L & NEB \\
+限制性内切酶BsaI & 10 U/$\mu$L & NEB \\
+植物RNA提取试剂盒 & -- & QIAGEN \\
+反转录试剂盒 & -- & TaKaRa \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{实验方法}
+
+\subsection{sgRNA设计与载体构建}
+根据OsRGA1基因序列，使用CRISPR-P在线工具设计靶向第一外显子的sgRNA序列。将合成的sgRNA序列克隆至pCas9载体中，构建CRISPR-Cas9表达载体。
+
+\subsection{水稻遗传转化}
+采用农杆菌介导的愈伤组织转化法进行水稻遗传转化，主要步骤包括：
+\begin{enumerate}
+    \item 水稻愈伤组织诱导与继代培养
+    \item 农杆菌培养与侵染
+    \item 共培养与筛选培养
+    \item 分化培养与生根培养
+    \item 移栽与鉴定
+\end{enumerate}
+
+\subsection{突变体筛选与鉴定}
+提取T0代转基因植株基因组DNA，PCR扩增靶位点区域，通过Sanger测序检测基因编辑情况。
+
+\section{数据分析}
+使用SPSS 22.0软件进行统计分析，采用单因素方差分析（One-way ANOVA）比较组间差异，$P < 0.05$表示差异显著。
+
+%% ==================== 第三章 结果与分析 ====================
+\chapter{结果与分析}
+
+\section{OsRGA1基因的生物信息学分析}
+通过NCBI数据库检索获得OsRGA1基因的全长cDNA序列，该基因编码一个含有928个氨基酸的NBS-LRR类蛋白。序列分析表明，OsRGA1蛋白包含典型的CC-NBS-LRR结构域（图~\ref{fig:domain}）。
+
+\begin{figure}[htbp]
+\centering
+% \includegraphics[width=0.8\textwidth]{figures/domain.pdf}
+\fbox{\parbox{0.8\textwidth}{\centering\vspace{2cm}OsRGA1蛋白结构域示意图\vspace{2cm}}}
+\caption{OsRGA1蛋白的结构域分析}
+\label{fig:domain}
+\end{figure}
+
+\section{CRISPR-Cas9载体构建与验证}
+成功构建了靶向OsRGA1基因的CRISPR-Cas9表达载体，菌落PCR和测序验证表明sgRNA序列正确插入载体中。
+
+\section{转基因水稻的获得与分子鉴定}
+通过农杆菌介导的遗传转化，共获得45株独立的T0代转基因植株。Sanger测序分析表明，其中32株（71.1\%）发生了靶位点突变，包括插入、缺失和替换等多种突变类型。
+
+\section{纯合突变体的筛选}
+通过T1代植株的分离分析，成功获得12个纯合突变系，这些突变体均为移码突变，导致OsRGA1蛋白功能丧失。
+
+\section{突变体表型分析}
+对纯合突变体进行稻瘟病接种实验，结果表明突变体对稻瘟病菌的抗性显著下降，病斑面积和病情指数均显著高于野生型对照（表~\ref{tab:phenotype}）。
+
+\begin{table}[htbp]
+\centering
+\caption{OsRGA1突变体的抗病表型分析}
+\label{tab:phenotype}
+\begin{tabular}{lccc}
+\toprule
+材料 & 病斑面积（mm$^2$） & 病情指数 & 抗性评价 \\
+\midrule
+野生型（WT） & 2.3 $\pm$ 0.4 & 1.2 $\pm$ 0.3 & 高抗 \\
+突变体-1 & 15.6 $\pm$ 2.1** & 5.8 $\pm$ 0.8** & 高感 \\
+突变体-2 & 14.2 $\pm$ 1.8** & 5.5 $\pm$ 0.7** & 高感 \\
+突变体-3 & 16.1 $\pm$ 2.3** & 6.1 $\pm$ 0.9** & 高感 \\
+\bottomrule
+\multicolumn{4}{l}{\footnotesize **表示与野生型相比差异极显著（$P < 0.01$）}
+\end{tabular}
+\end{table}
+
+%% ==================== 第四章 讨论 ====================
+\chapter{讨论}
+
+\section{OsRGA1基因的抗病功能}
+本研究通过CRISPR-Cas9技术成功敲除了水稻OsRGA1基因，并通过表型分析证实了该基因在水稻抗稻瘟病中的重要作用。OsRGA1编码的NBS-LRR类蛋白可能通过识别稻瘟病菌的效应子蛋白，启动ETI防御反应。
+
+\section{CRISPR-Cas9技术在基因功能研究中的优势}
+与传统的T-DNA插入突变和RNAi沉默技术相比，CRISPR-Cas9技术具有效率高、特异性强、操作简便等优点，为植物基因功能研究提供了新的技术选择。
+
+\section{研究展望}
+未来研究将进一步探索OsRGA1基因的作用机制，包括鉴定其识别的病原菌效应子、解析下游信号转导途径等，为水稻抗病分子育种奠定理论基础。
+
+%% ==================== 第五章 结论 ====================
+\chapter{结论}
+
+本研究的主要结论如下：
+
+\begin{enumerate}
+    \item 成功构建了靶向水稻OsRGA1基因的CRISPR-Cas9表达载体，并通过农杆菌介导的遗传转化获得了T0代转基因植株。
+
+    \item 通过分子检测筛选获得12个OsRGA1基因纯合敲除突变体，基因编辑效率达到71.1\%。
+
+    \item 表型分析证实OsRGA1基因敲除导致水稻对稻瘟病的抗性显著下降，表明该基因在水稻抗病免疫反应中发挥重要作用。
+
+    \item 本研究为水稻抗病分子育种提供了新的基因资源，也为CRISPR-Cas9技术在作物功能基因组学研究中的应用提供了参考。
+\end{enumerate}
+
+%% ==================== 参考文献 ====================
+\addcontentsline{toc}{chapter}{参考文献}
+\begin{thebibliography}{99}
+
+\bibitem{ref1}
+张培刚. 发展经济学教程[M]. 北京: 经济科学出版社, 2001: 185-187.
+
+\bibitem{ref2}
+Li X, Zong G, Bi S, et al. Research on global vision system for bioengineering-oriented micromanipulation robot system[J]. Journal of Beijing University of Aeronautics and Astronautics, 2002, 28(3): 249-252.
+
+\bibitem{ref3}
+Doudna JA, Charpentier E. The new frontier of genome engineering with CRISPR-Cas9[J]. Science, 2014, 346(6213): 1258096.
+
+\bibitem{ref4}
+Wang F, Wang C, Liu P, et al. Enhanced rice blast resistance by CRISPR/Cas9-targeted mutagenesis of the ERF transcription factor gene OsERF922[J]. PLoS ONE, 2016, 11(4): e0154027.
+
+\bibitem{ref5}
+李永忠. 光纤中的超短脉冲光参量效应研究[D]. 上海: 复旦大学, 2007: 26-29.
+
+\bibitem{ref6}
+何庆明. 云南泸沽湖旅游开发与生态经济问题研究[J]. 生态经济, 2001, (3): 49-51.
+
+\bibitem{ref7}
+Jones JD, Dangl JL. The plant immune system[J]. Nature, 2006, 444(7117): 323-329.
+
+\bibitem{ref8}
+Feng Z, Zhang B, Ding W, et al. Efficient genome editing in plants using a CRISPR/Cas system[J]. Cell Research, 2013, 23(10): 1229-1232.
+
+\end{thebibliography}
+
+%% ==================== 附录 ====================
+\begin{appendix}
+\section{引物序列}
+\begin{longtable}{@{}lll@{}}
+\toprule
+引物名称 & 序列（5'-3'） & 用途 \\
+\midrule
+\endfirsthead
+sgRNA-F & GGCAATGCTGGATCGTCATCC & sgRNA构建 \\
+sgRNA-R & AAACGGATGACGATCCAGCATTGCC & sgRNA构建 \\
+OsRGA1-F & ATGGATCCATGGCTGAAGCT & 基因扩增 \\
+OsRGA1-R & TCGAATTCTCAGTCAACGGT & 基因扩增 \\
+qPCR-F & GCTTCGATCAAGCTGATC & qRT-PCR \\
+qPCR-R & CAGTTGACGATCTTGAAC & qRT-PCR \\
+Actin-F & TGGCATCTCTCAGCACATTC & 内参基因 \\
+Actin-R & TGCACAATGGATGGGTCAGA & 内参基因 \\
+\bottomrule
+\end{longtable}
+
+\section{培养基配方}
+\begin{itemize}
+    \item \textbf{MS培养基}：MS盐 4.43 g/L，蔗糖 30 g/L，琼脂 8 g/L，pH 5.8
+    \item \textbf{愈伤诱导培养基}：MS培养基 + 2,4-D 2 mg/L
+    \item \textbf{分化培养基}：MS培养基 + 6-BA 2 mg/L + NAA 0.2 mg/L
+    \item \textbf{生根培养基}：1/2 MS培养基 + NAA 0.5 mg/L
+\end{itemize}
+\end{appendix}
+
+%% ==================== 致谢 ====================
+\begin{acknowledgements}
+时光荏苒，三年的研究生生涯即将结束。在论文完成之际，我要向所有关心和帮助过我的人表示衷心的感谢。
+
+首先，我要感谢我的导师李四教授。李老师渊博的学识、严谨的治学态度和勤勉的工作作风给我留下了深刻的印象，是我学习的榜样。在三年的研究生学习期间，李老师在学术研究、论文撰写等方面给予了我悉心的指导和无私的帮助，使我受益匪浅。
+
+感谢实验室的各位师兄师姐和同学们，感谢你们在实验过程中给予的帮助和支持。特别感谢王五博士在实验技术方面的指导，使我能够顺利完成各项实验工作。
+
+感谢南京大学生命科学学院提供的良好学习和科研环境，感谢学院各位老师在课程学习和科研工作中给予的教导和帮助。
+
+感谢国家自然科学基金（项目编号：XXXXXXXX）对本研究的资助。
+
+最后，我要感谢我的家人，感谢他们多年来对我学业的支持和理解，是他们的鼓励让我能够安心学习、专注科研。
+\end{acknowledgements}
+
+\end{document}

@@ -75,15 +75,14 @@ export class TemplateService {
     // Remove image placeholders like {%img_1%} from text fields
     const imagePlaceholderRegex = /\{%[^%]+%\}/g;
 
+    // Clean string fields
     const textKeys: (keyof ThesisData)[] = [
-      'introduction',
-      'conclusion',
+      'abstract',
+      'abstract_en',
+      'keywords',
+      'keywords_en',
       'references',
       'acknowledgements',
-      'technical_comparison',
-      'industry_comparison',
-      'key_variables',
-      'development_trends',
     ];
 
     for (const key of textKeys) {
@@ -95,11 +94,11 @@ export class TemplateService {
       }
     }
 
-    // Also clean chapters
-    if (cleaned.chapters) {
-      cleaned.chapters = cleaned.chapters.map((ch) => ({
-        ...ch,
-        content: ch.content.replace(imagePlaceholderRegex, '[图片]').trim(),
+    // Clean sections
+    if (cleaned.sections) {
+      cleaned.sections = cleaned.sections.map((sec) => ({
+        ...sec,
+        content: sec.content.replace(imagePlaceholderRegex, '[图片]').trim(),
       }));
     }
 
