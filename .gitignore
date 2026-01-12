@@ -23,3 +23,17 @@ npm-debug.log*
 
 # Test
 coverage/
+
+# Output files
+output/
+*.pdf
+!templates/**/*.pdf
+
+# Temp files
+.~*
+temp*/
+*.tmp
+
+# Test files
+example.docx
+render-request.json
