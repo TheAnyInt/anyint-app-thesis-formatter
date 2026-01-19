@@ -5,6 +5,8 @@ import { CreateTemplateDto, UpdateTemplateDto } from './dto/create-template.dto'
 import { njulifeTemplate } from './templates/njulife.template';
 import { njulife2Template } from './templates/njulife-2.template';
 import { thuTemplate } from './templates/thu.template';
+import { njuthesisTemplate } from './templates/njuthesis.template';
+import { scutTemplate } from './templates/scut.template';
 
 @Injectable()
 export class TemplateService implements OnModuleInit {
@@ -42,6 +44,24 @@ export class TemplateService implements OnModuleInit {
     };
     this.templates.set(thu.id, thu);
     this.logger.log(`Loaded built-in template: ${thu.name} (${thu.id})`);
+
+    // Load NJU official njuthesis template (v1.4.3)
+    const njuthesis: LatexTemplate = {
+      ...njuthesisTemplate,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.templates.set(njuthesis.id, njuthesis);
+    this.logger.log(`Loaded built-in template: ${njuthesis.name} (${njuthesis.id})`);
+
+    // Load SCUT thesis template
+    const scut: LatexTemplate = {
+      ...scutTemplate,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.templates.set(scut.id, scut);
+    this.logger.log(`Loaded built-in template: ${scut.name} (${scut.id})`);
   }
 
   create(dto: CreateTemplateDto): LatexTemplate {

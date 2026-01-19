@@ -186,6 +186,8 @@ curl -o thesis.pdf http://localhost:3000/thesis/jobs/JOB_ID/download \
 | `njulife` | 南京大学生命科学学院 | 硕士学位论文模板 |
 | `njulife-2` | 南京大学生命科学学院 | v2 (使用外部封面PDF) |
 | `thu` | 清华大学 | 本科学位论文模板 |
+| `njuthesis` | 南京大学 | 官方学位论文模板 (njuthesis v1.4.3) |
+| `scut` | 华南理工大学 | 博士/硕士学位论文模板 |
 
 ## Template Font Requirements
 
@@ -210,6 +212,34 @@ curl -o thesis.pdf http://localhost:3000/thesis/jobs/JOB_ID/download \
 | Kaiti SC / AR PL UKai (楷体) | Chinese | Italic text |
 | SimSun / Songti (宋体) | Chinese serif | Main text |
 | SimHei / Heiti (黑体) | Chinese sans | Headers |
+
+### njuthesis (NJU official template v1.4.3)
+
+| Font | Type | Usage |
+|------|------|-------|
+| Times New Roman | English serif | Main text |
+| Noto Serif CJK SC / Source Han Serif (思源宋体) | Chinese serif | Main text |
+| Noto Sans CJK SC / Source Han Sans (思源黑体) | Chinese sans | Headers |
+| SimSun (宋体) | Chinese | Fallback |
+| SimHei (黑体) | Chinese | Fallback |
+
+**Installation:**
+```bash
+# Install Noto CJK fonts (recommended for njuthesis)
+sudo apt-get install fonts-noto-cjk fonts-noto-cjk-extra
+```
+
+### scut (SCUT thesis template)
+
+| Font | Type | Usage |
+|------|------|-------|
+| Times New Roman | English serif | Main text |
+| SimSun (宋体) | Chinese serif | Main text (bundled: simsun.ttc) |
+| SimHei (黑体) | Chinese sans | Headers (bundled: simhei.ttf) |
+| KaiTi_GB2312 (楷体) | Chinese | Quotes |
+| FangSong_GB2312 (仿宋) | Chinese | Special text |
+
+> **Note:** SCUT template bundles `simsun.ttc` and `simhei.ttf` in template assets.
 
 ### Install All Required Fonts (Remote Server)
 
