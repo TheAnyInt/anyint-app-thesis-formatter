@@ -31,6 +31,7 @@ import { ThesisService } from './thesis.service';
 import { JobService } from '../job/job.service';
 import { JobStatus } from '../job/entities/job.entity';
 import { CasdoorGuard } from '../auth/casdoor.guard';
+import { ModelConfigService } from '../llm/model-config.service';
 
 @ApiTags('thesis')
 @ApiBearerAuth()
@@ -42,6 +43,7 @@ export class ThesisController {
   constructor(
     private readonly thesisService: ThesisService,
     private readonly jobService: JobService,
+    private readonly modelConfigService: ModelConfigService,
   ) {}
 
   /**
@@ -53,6 +55,31 @@ export class ThesisController {
       return authHeader.substring(7);
     }
     return undefined;
+  }
+
+  /**
+   * Get available LLM models
+   */
+  @Get('models')
+  @ApiOperation({
+    summary: 'Get available LLM models',
+    description: 'Returns list of allowed LLM models and the default model.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Available models',
+    schema: {
+      properties: {
+        models: { type: 'array', items: { type: 'string' } },
+        defaultModel: { type: 'string' },
+      },
+    },
+  })
+  getAvailableModels() {
+    return {
+      models: this.modelConfigService.getAllowedModels(),
+      defaultModel: this.modelConfigService.getDefaultModel(),
+    };
   }
 
   /**
@@ -79,12 +106,17 @@ export class ThesisController {
           description: 'Template ID (e.g., njulife-2, njulife, thu)',
           example: 'njulife-2',
         },
+        model: {
+          type: 'string',
+          description: 'LLM model to use (optional, e.g., gpt-4o, DeepSeek-V3.2-Exp)',
+          example: 'gpt-4o',
+        },
       },
       required: ['file'],
     },
   })
-  @ApiResponse({ status: 201, description: 'Job created successfully', schema: { properties: { jobId: { type: 'string' }, status: { type: 'string' } } } })
-  @ApiResponse({ status: 400, description: 'Invalid file type' })
+  @ApiResponse({ status: 201, description: 'Job created successfully', schema: { properties: { jobId: { type: 'string' }, status: { type: 'string' }, model: { type: 'string' } } } })
+  @ApiResponse({ status: 400, description: 'Invalid file type or model' })
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
@@ -107,9 +139,10 @@ export class ThesisController {
   async uploadThesis(
     @UploadedFile() file: Express.Multer.File,
     @Body('templateId') templateId: string,
+    @Body('model') model: string | undefined,
     @Req() req: Request,
   ) {
-    this.logger.log(`Received file upload: ${file?.originalname || 'unknown'}`);
+    this.logger.log(`Received file upload: ${file?.originalname || 'unknown'}${model ? `, model: ${model}` : ''}`);
 
     if (!file) {
       throw new BadRequestException('No file uploaded');
@@ -118,6 +151,9 @@ export class ThesisController {
     if (!templateId) {
       throw new BadRequestException('templateId is required');
     }
+
+    // Validate and resolve model
+    const resolvedModel = this.modelConfigService.resolveModel(model);
 
     // Determine file format
     const ext = path.extname(file.originalname).toLowerCase();
@@ -132,11 +168,13 @@ export class ThesisController {
       format,
       templateId,
       userToken,
+      resolvedModel,
     );
 
     return {
       jobId: job.id,
       status: job.status,
+      model: resolvedModel,
       pollUrl: `/thesis/jobs/${job.id}`,
     };
   }
@@ -146,6 +184,31 @@ export class ThesisController {
    * Returns structured data for frontend preview/editing
    */
   @Post('extract')
+  @ApiOperation({
+    summary: 'Extract content from thesis document',
+    description: 'Extract and parse content from a document file for preview/editing.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Document file (.docx, .pdf, .txt, .md)',
+        },
+        model: {
+          type: 'string',
+          description: 'LLM model to use (optional, e.g., gpt-4o, DeepSeek-V3.2-Exp)',
+          example: 'gpt-4o',
+        },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Extraction successful' })
+  @ApiResponse({ status: 400, description: 'Invalid file type or model' })
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
@@ -167,21 +230,28 @@ export class ThesisController {
   )
   async extractFromFile(
     @UploadedFile() file: Express.Multer.File,
+    @Body('model') model: string | undefined,
     @Req() req: Request,
   ) {
-    this.logger.log(`Extracting from file: ${file?.originalname || 'unknown'}`);
+    this.logger.log(`Extracting from file: ${file?.originalname || 'unknown'}${model ? `, model: ${model}` : ''}`);
 
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
 
+    // Validate and resolve model
+    const resolvedModel = this.modelConfigService.resolveModel(model);
+
     const ext = path.extname(file.originalname).toLowerCase();
     const format = ext === '.docx' ? 'docx' : ext === '.pdf' ? 'pdf' : ext === '.md' ? 'markdown' : 'txt';
 
     const userToken = this.extractUserToken(req);
-    const result = await this.thesisService.extractFromFile(file.buffer, format, userToken);
+    const result = await this.thesisService.extractFromFile(file.buffer, format, userToken, resolvedModel);
 
-    return result;
+    return {
+      ...result,
+      model: resolvedModel,
+    };
   }
 
   /**

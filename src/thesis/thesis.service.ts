@@ -53,14 +53,16 @@ export class ThesisService {
   /**
    * Start async thesis processing
    * @param userToken 用户 JWT token（Gateway 模式需要）
+   * @param model 指定的 LLM 模型（可选）
    */
   async startProcessing(
     fileBuffer: Buffer,
     format: InputFormat,
     templateId: string,
     userToken?: string,
+    model?: string,
   ): Promise<Job> {
-    this.logger.log(`Starting thesis processing with template: ${templateId}`);
+    this.logger.log(`Starting thesis processing with template: ${templateId}${model ? `, model: ${model}` : ''}`);
 
     // Extract text and images based on format
     let text: string;
@@ -82,7 +84,7 @@ export class ThesisService {
     }
 
     // Parse content with LLM
-    const document = await this.parseContent(text, format, images, userToken);
+    const document = await this.parseContent(text, format, images, userToken, model);
 
     // Create job for async LaTeX rendering
     const job = this.jobService.createJob(templateId, document);
@@ -96,17 +98,19 @@ export class ThesisService {
   /**
    * Parse content to structured document
    * @param userToken 用户 JWT token（Gateway 模式需要）
+   * @param model 指定的 LLM 模型（可选）
    */
   async parseContent(
     content: string,
     format: InputFormat,
     images?: Map<string, ExtractedImage>,
     userToken?: string,
+    model?: string,
   ): Promise<Record<string, any>> {
-    this.logger.log('Parsing content with LLM...');
+    this.logger.log(`Parsing content with LLM...${model ? ` (model: ${model})` : ''}`);
 
     // Use LLM to parse content (returns dynamic ThesisData structure)
-    const thesisData = await this.llmService.parseThesisContent(content, userToken);
+    const thesisData = await this.llmService.parseThesisContent(content, userToken, model);
 
     // Format references if present
     if (thesisData.references && thesisData.references.trim().length > 0) {
@@ -186,13 +190,15 @@ export class ThesisService {
    * Step 1: Extract content and images from file
    * Returns structured data for frontend preview
    * @param userToken 用户 JWT token（Gateway 模式需要）
+   * @param model 指定的 LLM 模型（可选）
    */
   async extractFromFile(
     fileBuffer: Buffer,
     format: InputFormat,
     userToken?: string,
+    model?: string,
   ): Promise<ExtractionResult> {
-    this.logger.log('Step 1: Extracting content from file...');
+    this.logger.log(`Step 1: Extracting content from file...${model ? ` (model: ${model})` : ''}`);
 
     // Extract text and images based on format
     let text: string;
@@ -214,7 +220,7 @@ export class ThesisService {
     }
 
     // Parse content with LLM
-    const document = await this.parseContent(text, format, images, userToken);
+    const document = await this.parseContent(text, format, images, userToken, model);
 
     // Generate extraction ID and store
     const extractionId = uuidv4();

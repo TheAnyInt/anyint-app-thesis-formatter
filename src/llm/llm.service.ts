@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { ThesisData, Section, ThesisMetadata } from '../thesis/dto/thesis-data.dto';
 import { GatewayProxyService } from '../gateway/gateway-proxy.service';
+import { ModelConfigService } from './model-config.service';
 import {
   DocumentStructure,
   buildStructureExtractionPrompt,
@@ -27,19 +28,19 @@ const LONG_CONTENT_THRESHOLD = 45000;
 export class LlmService {
   private readonly logger = new Logger(LlmService.name);
   private readonly openai: OpenAI | null = null;
-  private readonly model: string;
   private readonly useGateway: boolean;
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly modelConfigService: ModelConfigService,
     @Optional() private readonly gatewayProxy?: GatewayProxyService,
   ) {
-    this.model = this.configService.get<string>('OPENAI_MODEL') || 'gpt-4o';
+    const defaultModel = this.modelConfigService.getDefaultModel();
 
     // Check if Gateway is configured
     if (this.gatewayProxy?.isConfigured()) {
       this.useGateway = true;
-      this.logger.log(`LLM Service initialized with Gateway proxy, model: ${this.model}`);
+      this.logger.log(`LLM Service initialized with Gateway proxy, default model: ${defaultModel}`);
     } else {
       // Fallback to direct OpenAI
       this.useGateway = false;
@@ -54,7 +55,7 @@ export class LlmService {
         baseURL: baseURL || undefined,
       });
 
-      this.logger.log(`LLM Service initialized with OpenAI SDK, model: ${this.model}`);
+      this.logger.log(`LLM Service initialized with OpenAI SDK, default model: ${defaultModel}`);
       if (baseURL) {
         this.logger.log(`Using custom baseURL: ${baseURL}`);
       }
@@ -65,27 +66,29 @@ export class LlmService {
    * 解析论文内容
    * @param content 论文文本内容
    * @param userToken 用户 JWT token（Gateway 模式需要）
+   * @param model 指定的 LLM 模型（可选，默认使用配置的模型）
    */
-  async parseThesisContent(content: string, userToken?: string): Promise<ThesisData> {
-    this.logger.log(`Parsing thesis content with LLM... (${content.length} characters)`);
+  async parseThesisContent(content: string, userToken?: string, model?: string): Promise<ThesisData> {
+    const resolvedModel = model || this.modelConfigService.getDefaultModel();
+    this.logger.log(`Parsing thesis content with LLM (model: ${resolvedModel})... (${content.length} characters)`);
 
     // Route to appropriate processing method based on content length
     if (content.length < LONG_CONTENT_THRESHOLD) {
-      return this.parseThesisContentSingleCall(content, userToken);
+      return this.parseThesisContentSingleCall(content, userToken, resolvedModel);
     } else {
       this.logger.log(`Content exceeds ${LONG_CONTENT_THRESHOLD} chars, using two-phase processing`);
-      return this.parseThesisContentMultiPhase(content, userToken);
+      return this.parseThesisContentMultiPhase(content, userToken, resolvedModel);
     }
   }
 
   /**
    * Single-call processing for short documents (original implementation)
    */
-  private async parseThesisContentSingleCall(content: string, userToken?: string): Promise<ThesisData> {
+  private async parseThesisContentSingleCall(content: string, userToken?: string, model?: string): Promise<ThesisData> {
     const prompt = this.buildPrompt(content);
 
     try {
-      const resultText = await this.makeLlmCall(prompt, userToken);
+      const resultText = await this.makeLlmCall(prompt, userToken, 16000, model);
 
       if (!resultText) {
         throw new Error('Empty response from LLM');
@@ -113,7 +116,7 @@ export class LlmService {
    * Phase 1: Extract document structure
    * Phase 2: Process sections in parallel
    */
-  private async parseThesisContentMultiPhase(content: string, userToken?: string): Promise<ThesisDataWithWarnings> {
+  private async parseThesisContentMultiPhase(content: string, userToken?: string, model?: string): Promise<ThesisDataWithWarnings> {
     try {
       // Phase 1: Extract document structure
       this.logger.log('Phase 1: Extracting document structure...');
@@ -121,7 +124,7 @@ export class LlmService {
 
       try {
         const structurePrompt = buildStructureExtractionPrompt(content);
-        const structureResponse = await this.makeLlmCall(structurePrompt, userToken, 4000);
+        const structureResponse = await this.makeLlmCall(structurePrompt, userToken, 4000, model);
         structure = parseStructureResponse(structureResponse);
         this.logger.log(`Structure extraction successful: ${structure.sections.length} sections identified`);
       } catch (error) {
@@ -135,7 +138,7 @@ export class LlmService {
 
       // Phase 2: Process chunks in parallel
       this.logger.log('Phase 2: Processing chunks in parallel...');
-      const results = await this.processChunksInParallel(chunks, content, userToken);
+      const results = await this.processChunksInParallel(chunks, content, userToken, model);
 
       // Merge results
       this.logger.log('Merging chunk results...');
@@ -165,6 +168,7 @@ export class LlmService {
     chunks: ContentChunk[],
     originalContent: string,
     userToken?: string,
+    model?: string,
   ): Promise<ChunkProcessingResult[]> {
     // Check for figure markers in original content
     const hasFigureMarkers = /\[FIGURE:(docximg|pdfimg)\d+\]/.test(originalContent);
@@ -175,7 +179,7 @@ export class LlmService {
 
     // Process all chunks in parallel
     const promises = chunks.map((chunk) =>
-      this.processChunkWithRetry(chunk, hasFigureMarkers, figureIdList, userToken),
+      this.processChunkWithRetry(chunk, hasFigureMarkers, figureIdList, userToken, model),
     );
 
     return Promise.all(promises);
@@ -189,6 +193,7 @@ export class LlmService {
     hasFigureMarkers: boolean,
     figureIdList: string,
     userToken?: string,
+    model?: string,
   ): Promise<ChunkProcessingResult> {
     let lastError: Error | null = null;
 
@@ -201,7 +206,7 @@ export class LlmService {
         }
 
         const prompt = buildChunkPrompt(chunk, hasFigureMarkers, figureIdList);
-        const response = await this.makeLlmCall(prompt, userToken);
+        const response = await this.makeLlmCall(prompt, userToken, 16000, model);
 
         if (!response) {
           throw new Error('Empty response from LLM');
@@ -238,15 +243,16 @@ export class LlmService {
   /**
    * Make a single LLM API call
    */
-  private async makeLlmCall(prompt: string, userToken?: string, maxTokens: number = 16000): Promise<string> {
+  private async makeLlmCall(prompt: string, userToken?: string, maxTokens: number = 16000, model?: string): Promise<string> {
     const systemMessage = '你是一个专业的文档解析助手，专门从学术论文中提取结构化信息。请始终返回有效的 JSON 格式，保留完整内容，按原文实际结构提取，不要预设章节名称。';
+    const modelToUse = model || this.modelConfigService.getDefaultModel();
 
     if (this.useGateway && this.gatewayProxy) {
       if (!userToken) {
         throw new Error('User token is required when using Gateway proxy');
       }
       const response = await this.gatewayProxy.chatCompletions(userToken, {
-        model: this.model,
+        model: modelToUse,
         messages: [
           { role: 'system', content: systemMessage },
           { role: 'user', content: prompt },
@@ -259,7 +265,7 @@ export class LlmService {
       return response.choices?.[0]?.message?.content || '';
     } else {
       const response = await this.openai!.chat.completions.create({
-        model: this.model,
+        model: modelToUse,
         messages: [
           { role: 'system', content: systemMessage },
           { role: 'user', content: prompt },
