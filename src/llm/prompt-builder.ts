@@ -63,22 +63,40 @@ export function buildChunkPrompt(chunk: ContentChunk, hasFigureMarkers: boolean,
   // Determine which fields to request
   const metadataInstruction = isFirstChunk
     ? `"metadata": {
-    "title": "论文标题",
+    "title": "论文完整标题（中文）- 通常是封面最醒目的文字",
     "title_en": "英文标题（如有）",
-    "author_name": "作者姓名",
-    "student_id": "学号（如有）",
-    "school": "学院/院系",
-    "major": "专业",
-    "supervisor": "指导教师",
-    "date": "日期"
-  }`
+    "author_name": "作者真实姓名（不要包含'作者'、'姓名'等标签文字）",
+    "student_id": "学号（纯数字）",
+    "school": "学院/院系全称（不要包含'学院'等标签）",
+    "major": "专业全称",
+    "supervisor": "导师姓名（可包含职称如'张三 教授'）",
+    "date": "日期（如'2024年5月'）"
+  }
+
+  **元数据提取重要提示：**
+  - 元数据通常位于文档开头的封面或扉页（前1-3页）
+  - 标题：文档中最大/最醒目的文字，可能分中英文两行
+  - 作者：通常标注"作者"、"姓名"、"学生"、"Author"等标签旁边
+  - 导师：标注"导师"、"指导教师"、"Supervisor"、"Advisor"等
+  - 不要将标签文字（如"作者："、"指导教师："）作为值，只提取实际内容
+  - 如果某字段不存在，返回空字符串 ""
+
+  **摘要和关键词提取重要提示：**
+  - 中文摘要：通常在封面/扉页之后，标题为"摘要"、"摘 要"
+  - 英文摘要：标题为"Abstract"、"ABSTRACT"
+  - 中文关键词：紧跟中文摘要，以"关键词"、"关键字"、"关 键 词"开头
+  - 英文关键词：紧跟英文摘要，以"Keywords"、"Key words"开头
+  - 摘要内容是正文前的独立部分，不要与正文混淆
+  - 如果文档确实没有摘要或关键词，返回空字符串 ""`
     : `"metadata": {}`;
 
-  const abstractInstruction = chunk.includesAbstract
-    ? `"abstract": "中文摘要内容",
-  "abstract_en": "英文摘要内容（如有）",
-  "keywords": "关键词1、关键词2、关键词3",
-  "keywords_en": "keyword1, keyword2, keyword3",`
+  // Always request abstract/keywords from the first chunk, even if abstractRange wasn't explicitly found
+  // Most thesis documents have abstracts at the beginning
+  const abstractInstruction = (isFirstChunk || chunk.includesAbstract)
+    ? `"abstract": "中文摘要内容（通常在文档开头，标题为'摘要'）",
+  "abstract_en": "英文摘要内容（如有，标题为'Abstract'）",
+  "keywords": "关键词（通常紧跟摘要，以'关键词'或'关键字'开头）",
+  "keywords_en": "英文关键词（如有，以'Keywords'开头）",`
     : '';
 
   const sectionsInstruction = hasOnlySections || chunk.sections.length > 0
@@ -124,31 +142,35 @@ ${contextInfo}
 - 常见转换：𝛼→\\alpha, 𝛽→\\beta, ∑→\\sum, ∏→\\prod, ∫→\\int, √→\\sqrt, ≤→\\leq, ≥→\\geq, 𝑥ᵢ→x_i, 𝑥²→x^2
 
 **表格处理（极重要）：**
-- PDF提取的表格可能用 [TABLE_START]...[TABLE_END] 标记，每个单元格用 [TABLE_CELL: xxx] 表示
-- 例如：
-  [TABLE_START]
-  [TABLE_CELL: 数据集]
-  [TABLE_CELL: 类别数]
-  [TABLE_CELL: CIFAR-10]
-  [TABLE_CELL: 10]
-  [TABLE_END]
-- 需要根据表头数量确定列数，然后将单元格重组为表格行
-- **Markdown表格必须转换**：如果看到 | col1 | col2 | 这样的管道符分隔格式，必须转换为LaTeX
-- **必须将所有表格转换为LaTeX tabular格式**：
-\\begin{table}[H]
-\\centering
-\\caption{根据上下文推断的表格标题}
-\\begin{tabular}{|c|c|c|c|}
-\\hline
-列1 & 列2 & 列3 & 列4 \\\\\\\\
-\\hline
-数据1 & 数据2 & 数据3 & 数据4 \\\\\\\\
-\\hline
-\\end{tabular}
-\\end{table}
-- **禁止输出 Markdown 格式的表格**（如 | A | B | 或 |---|---| 分隔线），必须用 LaTeX tabular
-- 根据内容推断列数：如果表头是"数据集、类别数、训练集、测试集"则为4列
-- **重要**：如果无法正确转换表格，请保留原始的 [TABLE_START]...[TABLE_END] 和 [TABLE_CELL:] 标记，不要删除它们
+PDF提取的表格用 [TABLE_START]...[TABLE_END] 标记，每个单元格用 [TABLE_CELL: xxx] 表示。
+
+你必须分析单元格内容，确定表格结构，然后输出带有明确结构的格式：
+
+输入示例：
+[TABLE_START]
+[TABLE_CELL: Dataset]
+[TABLE_CELL: Classes]
+[TABLE_CELL: Samples]
+[TABLE_CELL: CIFAR-10]
+[TABLE_CELL: 10]
+[TABLE_CELL: 60000]
+[TABLE_END]
+
+输出格式（在content中）：
+[TABLE cols=3]
+[HEADER]Dataset|Classes|Samples[/HEADER]
+[ROW]CIFAR-10|10|60000[/ROW]
+[/TABLE]
+
+规则：
+1. 分析单元格语义确定列数（cols=N）
+2. 第一行通常是表头，用 [HEADER]...[/HEADER] 包裹
+3. 数据行用 [ROW]...[/ROW] 包裹
+4. 单元格用 | 分隔
+5. 如果无法确定结构，保留原始 [TABLE_CELL:] 格式
+
+- **Markdown表格必须转换**：如果看到 | col1 | col2 | 这样的管道符分隔格式，也请转换为上述结构化格式
+- **禁止输出 Markdown 格式的表格**（如 |---|---| 分隔线）
 ${figureInstructions}
 内容片段：
 ${contentToProcess}`;
