@@ -90,6 +90,37 @@ def mark_formulas(text: str) -> str:
     return '\n'.join(result)
 
 
+def extract_tables_with_pymupdf(page) -> list:
+    """Extract tables using PyMuPDF's built-in detection."""
+    try:
+        tables = []
+        for table in page.find_tables().tables:
+            cell_data = table.extract()
+            rows = [row for row in cell_data if any(cell and cell.strip() for cell in row)]
+            if len(rows) >= 2:
+                tables.append({
+                    'bbox': table.bbox,
+                    'rows': rows,
+                    'col_count': table.col_count
+                })
+        return tables
+    except Exception as e:
+        sys.stderr.write(f"Warning: PyMuPDF table detection failed: {e}\n")
+        return []
+
+
+def format_table_as_markers(table_data: dict) -> str:
+    """Convert detected table to [TABLE_START]...[TABLE_END] format with row hints."""
+    lines = ['[TABLE_START]']
+    for row_idx, row in enumerate(table_data['rows']):
+        lines.append(f'[TABLE_ROW:{row_idx}]')
+        for cell in row:
+            cell_text = (cell or '').replace('\n', ' ').strip()
+            lines.append(f'[TABLE_CELL: {cell_text}]' if cell_text else '[TABLE_CELL: ]')
+    lines.append('[TABLE_END]')
+    return '\n'.join(lines)
+
+
 def detect_table_structure(text: str) -> str:
     """
     Detect potential table data based on patterns:
@@ -105,7 +136,7 @@ def detect_table_structure(text: str) -> str:
     def is_table_cell_candidate(line: str) -> bool:
         """Check if a line looks like a single table cell from PDF extraction"""
         stripped = line.strip()
-        if not stripped or len(stripped) > 25:  # Empty or too long for a cell
+        if not stripped or len(stripped) > 100:  # Empty or too long for a cell
             return False
         # Exclude section headers (e.g., "4.2 实验结果", "第一章")
         if re.match(r'^[\d]+\.\d+\s+.+$', stripped) or stripped.startswith('第'):
@@ -122,16 +153,25 @@ def detect_table_structure(text: str) -> str:
         # Short Chinese text that could be a header (not ending with sentence punctuation)
         if len(stripped) <= 10 and not stripped.endswith(('。', '：', '；')):
             return True
+        # Medium-length English text (headers like "Accuracy", "Model Parameters")
+        if re.match(r'^[A-Za-z][A-Za-z\s\-]{0,40}$', stripped):
+            return True
+        # Chinese text up to 20 chars
+        if len(stripped) <= 20 and re.match(r'^[\u4e00-\u9fa5]+', stripped):
+            return True
+        # Percentage values
+        if re.match(r'^[\d,.]+%$', stripped):
+            return True
         return False
 
     def looks_like_table_sequence(buffer: list) -> bool:
         """Check if a sequence of lines looks like table data"""
-        if len(buffer) < 6:  # Need at least header row + 1 data row (assuming 3+ cols)
+        if len(buffer) < 4:  # Need at least header row + 1 data row (assuming 2+ cols)
             return False
         # Count numeric entries
         num_count = sum(1 for line in buffer if re.match(r'^[\d,.\-+%]+$', line.strip()))
-        # Should have a good mix of text and numbers
-        return num_count >= 3 and num_count < len(buffer)
+        # Should have at least one number or enough cells
+        return num_count >= 1 or len(buffer) >= 4
 
     for i, line in enumerate(lines):
         stripped = line.strip()
@@ -210,6 +250,10 @@ def extract_pdf_with_layout(pdf_path: str, output_dir: str) -> dict:
     image_counter = 0
 
     for page_num, page in enumerate(doc):
+        # Extract tables using PyMuPDF native detection
+        page_tables = extract_tables_with_pymupdf(page)
+        table_bboxes = [t['bbox'] for t in page_tables]
+
         # Get all blocks (text and images)
         blocks = page.get_text("dict")["blocks"]
 
@@ -283,6 +327,10 @@ def extract_pdf_with_layout(pdf_path: str, output_dir: str) -> dict:
                 else:
                     # Image block found but no xref match
                     result["text_with_images"] += f"\n[FIGURE:{img_id}:no_xref]\n"
+
+        # Insert formatted table markers from PyMuPDF native detection
+        for table in sorted(page_tables, key=lambda t: t['bbox'][1]):
+            result["text_with_images"] += f"\n{format_table_as_markers(table)}\n"
 
         # Add page separator
         if page_num < len(doc) - 1:

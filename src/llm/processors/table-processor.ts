@@ -6,67 +6,87 @@ const logger = new Logger('TableProcessor');
  * Table processing utilities for converting various table formats to LaTeX
  */
 export class TableProcessor {
-  // Strategy 1: Multi-language header detection (Chinese, English, or mixed)
-  private static detectHeaderColumns(cells: string[]): { numCols: number; confidence: number } {
-    const isHeaderCandidate = (cell: string): boolean => {
-      if (cell.length > 12) return false;  // Headers are typically short
-      if (/^[\d,.\-+%]+$/.test(cell)) return false;  // Pure numeric = data
-      if (/^[A-Z]{2,}\-?\d+$/.test(cell)) return false;  // Dataset names like CIFAR-10
-      // Mixed Chinese + alphanumeric is likely data (e.g., "项目A"), not header
-      if (/[\u4e00-\u9fa5]/.test(cell) && /[a-zA-Z0-9]/.test(cell)) return false;
-      // CamelCase patterns are likely model/data names, not headers (e.g., ResNet, ModelA)
-      if (/[a-z][A-Z]/.test(cell)) return false;
-      // Words ending with uppercase after lowercase (e.g., ModelA) are data
-      if (/[a-z][A-Z]$/.test(cell)) return false;
-      // Accept pure Chinese, pure English words, or short identifiers like "F1"
-      return /^[\u4e00-\u9fa5]+$/.test(cell) || /^[A-Za-z][A-Za-z0-9]*$/.test(cell);
-    };
-
-    let headerCount = 0;
-    for (const cell of cells) {
-      if (isHeaderCandidate(cell)) {
-        headerCount++;
-        if (headerCount > 8) break;
-      } else {
-        break;
-      }
-    }
-
-    if (headerCount >= 2 && headerCount <= 8) {
-      const expectedRows = Math.floor(cells.length / headerCount);
-      if (expectedRows >= 2 && cells.length % headerCount === 0) {
-        return { numCols: headerCount, confidence: 0.9 };
-      }
-      return { numCols: headerCount, confidence: 0.6 };
-    }
-    return { numCols: 0, confidence: 0 };
+  // Classify cell into a type based on content
+  private static getCellType(cell: string): string {
+    if (/^[\d,.\-+%]+$/.test(cell)) return 'num';
+    if (/^[\u4e00-\u9fa5]+$/.test(cell)) return 'chn';
+    if (/^[a-zA-Z]+$/.test(cell)) return 'eng';
+    if (/^[a-zA-Z][\w\-]*$/.test(cell)) return 'id';
+    return 'mix';
   }
 
-  // Strategy 2: Detect by cell type patterns (text, number, identifier)
-  private static detectByPattern(cells: string[]): { numCols: number; confidence: number } {
-    const getCellType = (cell: string): string => {
-      if (/^[\d,.\-+%]+$/.test(cell)) return 'num';
-      if (/^[\u4e00-\u9fa5]+$/.test(cell)) return 'chn';
-      if (/^[a-zA-Z][\w\-]*$/.test(cell)) return 'id';
-      return 'mix';
-    };
+  // Data-driven column detection: find the column count that maximizes row consistency
+  private static detectColumns(cells: string[]): { numCols: number; confidence: number } {
+    const types = cells.map(c => this.getCellType(c));
 
-    // All-numeric cells = ambiguous structure, don't try to detect
-    const hasNonNumeric = cells.some(c => getCellType(c) !== 'num');
-    if (!hasNonNumeric) return { numCols: 0, confidence: 0 };
+    // All same type = ambiguous structure
+    const uniqueTypes = new Set(types);
+    if (uniqueTypes.size === 1) return { numCols: 0, confidence: 0 };
 
-    // Find repeating type patterns
-    for (let stride = 2; stride <= 8; stride++) {
-      let matches = 0;
-      for (let i = 0; i + stride < cells.length; i++) {
-        if (getCellType(cells[i]) === getCellType(cells[i + stride])) matches++;
+    let bestScore = 0;
+    let bestCols = 0;
+
+    // Try each candidate column count
+    for (let numCols = 2; numCols <= Math.min(8, Math.floor(cells.length / 2)); numCols++) {
+      // Must divide evenly or nearly evenly
+      if (cells.length % numCols > 1) continue;
+
+      const numRows = Math.floor(cells.length / numCols);
+      if (numRows < 2) continue;
+
+      // Split types into rows
+      const typeRows: string[][] = [];
+      for (let i = 0; i < numRows * numCols; i += numCols) {
+        typeRows.push(types.slice(i, i + numCols));
       }
-      const total = cells.length - stride;
-      if (total > 0 && matches / total > 0.6) {
-        return { numCols: stride, confidence: matches / total * 0.8 };
+
+      // Score 1: Column type consistency in data rows (rows 1+)
+      // For each column, count how many data cells have the same type
+      let columnConsistency = 0;
+      for (let col = 0; col < numCols; col++) {
+        const colTypes = typeRows.slice(1).map(row => row[col]);
+        const typeCounts = new Map<string, number>();
+        for (const t of colTypes) {
+          typeCounts.set(t, (typeCounts.get(t) || 0) + 1);
+        }
+        const maxCount = Math.max(...typeCounts.values());
+        columnConsistency += maxCount / colTypes.length;
+      }
+      columnConsistency /= numCols;
+
+      // Score 2: Header distinctiveness (first row differs from data rows)
+      let headerDistinct = 0;
+      const dataTypePattern = typeRows.slice(1).map(row => row.join(',')).join('|');
+      const headerPattern = typeRows[0].join(',');
+      // Check if header row type pattern differs from typical data row
+      if (!dataTypePattern.includes(headerPattern)) {
+        headerDistinct = 0.3;
+      }
+      // Bonus if first row has more text types than data rows
+      const headerTextCount = typeRows[0].filter(t => t !== 'num').length;
+      const avgDataTextCount = typeRows.slice(1).reduce((sum, row) =>
+        sum + row.filter(t => t !== 'num').length, 0) / (numRows - 1);
+      if (headerTextCount > avgDataTextCount) {
+        headerDistinct += 0.2;
+      }
+
+      // Score 3: Penalty for leftover cells
+      const usedCells = numRows * numCols;
+      const cellPenalty = (cells.length - usedCells) / cells.length;
+
+      // Combined score
+      const score = columnConsistency * 0.6 + headerDistinct * 0.3 - cellPenalty * 0.3;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestCols = numCols;
       }
     }
-    return { numCols: 0, confidence: 0 };
+
+    // Require minimum confidence threshold
+    if (bestScore < 0.4) return { numCols: 0, confidence: 0 };
+
+    return { numCols: bestCols, confidence: bestScore };
   }
   /**
    * Convert markdown tables to LaTeX tabular format
@@ -121,39 +141,125 @@ export class TableProcessor {
 
   /**
    * Convert [TABLE_CELL:] format from PDF extraction to LaTeX
+   * Supports two patterns:
+   * 1. New structured format from LLM: [TABLE cols=N]...[/TABLE]
+   * 2. Fallback: old [TABLE_START]...[TABLE_END] with [TABLE_CELL:] markers
    */
   static convertTableCellsToLatex(content: string): string {
-    // Match [TABLE_START]...[TABLE_END] blocks
-    const tableBlockRegex = /\[TABLE_START\]\n([\s\S]*?)\[TABLE_END\]/g;
+    // Pattern 1: New structured format from LLM
+    // [TABLE cols=3]
+    // [HEADER]A|B|C[/HEADER]
+    // [ROW]1|2|3[/ROW]
+    // [/TABLE]
+    const structuredTableRegex = /\[TABLE cols=(\d+)\]\n([\s\S]*?)\[\/TABLE\]/g;
 
-    return content.replace(tableBlockRegex, (match, cellsContent) => {
+    content = content.replace(structuredTableRegex, (match, colsStr, tableContent) => {
       try {
+        const numCols = parseInt(colsStr, 10);
+        const rows: string[][] = [];
+
+        // Extract header
+        const headerMatch = tableContent.match(/\[HEADER\](.*?)\[\/HEADER\]/);
+        if (headerMatch) {
+          rows.push(headerMatch[1].split('|').map((c: string) => c.trim()));
+        }
+
+        // Extract data rows
+        const rowRegex = /\[ROW\](.*?)\[\/ROW\]/g;
+        let rowMatch;
+        while ((rowMatch = rowRegex.exec(tableContent)) !== null) {
+          rows.push(rowMatch[1].split('|').map((c: string) => c.trim()));
+        }
+
+        if (rows.length < 2) return match;
+
+        // Build LaTeX
+        const colSpec = '|' + 'c|'.repeat(numCols);
+        let latex = '\\begin{table}[H]\n\\centering\n';
+        latex += `\\begin{tabular}{${colSpec}}\n\\hline\n`;
+        latex += rows[0].join(' & ') + ' \\\\\\\\ \\hline\n';
+        for (let i = 1; i < rows.length; i++) {
+          latex += rows[i].join(' & ') + ' \\\\\\\\ \\hline\n';
+        }
+        latex += '\\end{tabular}\n\\end{table}';
+        return latex;
+      } catch (e) {
+        logger.warn(`Failed to convert structured table format: ${e}`);
+        return match;
+      }
+    });
+
+    // Pattern 2: Format with row markers from PyMuPDF
+    const rowMarkerTableRegex = /\[TABLE_START\]\n([\s\S]*?)\[TABLE_END\]/g;
+
+    content = content.replace(rowMarkerTableRegex, (match, tableContent) => {
+      try {
+        // Check if it has row markers (from PyMuPDF native detection)
+        if (tableContent.includes('[TABLE_ROW:')) {
+          const rows: string[][] = [];
+          // Split content by row markers
+          const rowSections = tableContent.split(/\[TABLE_ROW:\d+\]\s*/);
+          for (const section of rowSections) {
+            if (!section.trim()) continue;
+            const cellRegex = /\[TABLE_CELL:\s*([^\]]*)\]/g;
+            const cells: string[] = [];
+            let cellMatch;
+            while ((cellMatch = cellRegex.exec(section)) !== null) {
+              cells.push(cellMatch[1].trim());
+            }
+            if (cells.length > 0) rows.push(cells);
+          }
+
+          // Validate we have enough rows
+          if (rows.length < 2) {
+            logger.warn('Table with row markers too small');
+            return match;
+          }
+
+          // Determine column count from the first row
+          const numCols = rows[0].length;
+          if (numCols === 0) return match;
+
+          // Build LaTeX table
+          const colSpec = '|' + 'c|'.repeat(numCols);
+          let latex = '\\begin{table}[H]\n\\centering\n';
+          latex += `\\begin{tabular}{${colSpec}}\n\\hline\n`;
+
+          // Header row
+          latex += rows[0].join(' & ') + ' \\\\\\\\ \\hline\n';
+
+          // Data rows
+          for (let i = 1; i < rows.length; i++) {
+            // Ensure row has correct number of columns
+            const row = rows[i];
+            while (row.length < numCols) row.push('');
+            latex += row.slice(0, numCols).join(' & ') + ' \\\\\\\\ \\hline\n';
+          }
+
+          latex += '\\end{tabular}\n\\end{table}';
+          return latex;
+        }
+
+        // Fallback: old [TABLE_START]...[TABLE_END] format without row markers
         // Extract all cells
         const cellRegex = /\[TABLE_CELL:\s*([^\]]+)\]/g;
         const cells: string[] = [];
         let cellMatch;
-        while ((cellMatch = cellRegex.exec(cellsContent)) !== null) {
+        while ((cellMatch = cellRegex.exec(tableContent)) !== null) {
           cells.push(cellMatch[1].trim());
         }
 
         if (cells.length < 4) return match; // Not enough cells for a table
 
-        // Try multiple detection strategies
-        const strategies = [
-          this.detectHeaderColumns(cells),
-          this.detectByPattern(cells),
-        ];
+        // Data-driven column detection
+        const detection = this.detectColumns(cells);
 
-        const best = strategies
-          .filter(s => s.confidence > 0.5)
-          .sort((a, b) => b.confidence - a.confidence)[0];
-
-        if (!best) {
+        if (detection.numCols === 0) {
           logger.warn('Column detection failed, preserving original markers');
           return match;  // Keep original instead of guessing
         }
 
-        const numCols = best.numCols;
+        const numCols = detection.numCols;
 
         // Validate reconstructed table
         const rows: string[][] = [];
@@ -205,5 +311,7 @@ export class TableProcessor {
         return match;
       }
     });
+
+    return content;
   }
 }
