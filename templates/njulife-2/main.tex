@@ -14,7 +14,7 @@
 \setlength{\headheight}{0.8cm}
 \usepackage{setspace}
 \linespread{1.5} %设置全文行间距
-\newfontfamily{\myCalibri}{calibri.ttf}
+\newfontfamily{\myCalibri}{../shared/calibri.ttf}
 
 %\usepackage[english]{babel}
 %\usepackage{float}     %放弃美学排版图表
@@ -47,16 +47,16 @@
 % -- text font --
 % compile using Xelatex
 %%%%%%%%%%%%%%%%%%%%%%%
-% -- 中文字体 --
+% -- 中文字体 -- 使用bundled字体文件 (templates/shared/)
 %\setCJKmainfont{Microsoft YaHei}  % 微软雅黑
 %\setCJKmainfont{YouYuan}  % 幼圆
 %\setCJKmainfont{NSimSun}  % 新宋体
 %\setCJKmainfont{KaiTi}    % 楷体
-\setCJKmainfont{simsun.ttc}   % 宋体
+\setCJKmainfont{../shared/simsun.ttc}   % 宋体
 %\setCJKmainfont{SimHei}   % 黑体
 \usepackage{pdfpages}
-% -- 英文字体 --
-\setmainfont{Times New Roman}
+% -- 英文字体 -- 使用TeX Gyre Termes (Times New Roman的开源替代)
+\setmainfont{TeX Gyre Termes}
 %\setmainfont{DejaVu Sans}
 %\setmainfont{Latin Modern Mono}
 %\setmainfont{Consolas}

@@ -74,8 +74,10 @@
 \setlength{\cftbeforesubsecskip}{4pt}%小节节前间隔4磅
 \cftsetpnumwidth{1.5em}
 %%章节字体和字号
-\setCJKfamilyfont{kai}{kaiti_GB2312.TTF}
+\setCJKfamilyfont{kai}{../shared/kaiti_GB2312.TTF}
 \newcommand{\kaiti}{\CJKfamily{kai}}
+% 英文字体 - 使用TeX Gyre Termes (Times New Roman的开源替代)
+\newfontfamily{\timesnewroman}{TeX Gyre Termes}
 \renewcommand\cftchapfont{\heiti\zihao{4}}
 \renewcommand\cftsecfont{\fangsong\zihao{4}}
 \renewcommand\cftsubsecfont{\fangsong\zihao{4}}
@@ -138,20 +140,20 @@
             \forloop{title_str_number}{1}{\value{title_str_number}<6}{%整个循环不会超过6
                 \StrFindGroup{\@title}{\value{title_str_number}}[\mygroup]%
                 \IfStrEq{\mygroup}{}{}{%
-                    & {\StrFindGroup{\@title}{\value{title_str_number}}[\mygroup]\HUNNUunderline[258pt]{\kaiti\zihao{-2}\fontspec{Times New Roman}\zihao{-2}\mygroup}}\\[0.40cm]%
+                    & {\StrFindGroup{\@title}{\value{title_str_number}}[\mygroup]\HUNNUunderline[258pt]{\kaiti\zihao{-2}\timesnewroman\zihao{-2}\mygroup}}\\[0.40cm]%
                 }%
             }%
             \HUNNU@PrevtitleEn%英文标题折行输出
             \forloop{title_str_number}{1}{\value{title_str_number}<6}{%
                 \StrFindGroup{\@entitle}{\value{title_str_number}}[\mygroup]%
                 \IfStrEq{\mygroup}{}{}{%
-                    & {\StrFindGroup{\@entitle}{\value{title_str_number}}[\mygroup]\HUNNUunderline[258pt]{\fontspec{Times New Roman}\zihao{-2}\mygroup}}\\[0.40cm]%
+                    & {\StrFindGroup{\@entitle}{\value{title_str_number}}[\mygroup]\HUNNUunderline[258pt]{\timesnewroman\zihao{-2}\mygroup}}\\[0.40cm]%
                 }%
             }%
             {\heiti\HUNNU@Prevauthor} &
             {\HUNNUunderline[258pt]{ \kaiti\zihao{-2}\@author}}\\[0.40cm]%作者信息
             {\heiti \HUNNU@Prevserialnumber} &
-            {\HUNNUunderline[258pt]{\fontspec{Times New Roman}\zihao{-2}  \@serialnumber}}\\[0.40cm]%学号
+            {\HUNNUunderline[258pt]{\timesnewroman\zihao{-2}  \@serialnumber}}\\[0.40cm]%学号
             {\heiti \HUNNU@Prevadvisor} &
             {\HUNNUunderline[258pt]{\kaiti\zihao{-2} \@advisor}} \\[0.40cm]%指导老师
             {\heiti \HUNNU@Prevcollege} &
@@ -199,16 +201,16 @@
             \singlespacing
             \selectfont
             \centering
-            \bf\fontspec{Times New Roman}\zihao{3}\noindent{\@entitle\ \the\entitletra}%英文标题
+            \bf\timesnewroman\zihao{3}\noindent{\@entitle\ \the\entitletra}%英文标题
         \end{minipage}
     \end{center}%
     \setlength{\parskip}{0pt}   
     
     {
     \singlespacing
-    \par\noindent\bf\fontspec{Times New Roman}\zihao{4}\text{Abstract: }\fontspec{Times New Roman}\zihao{-4} #1
+    \par\noindent\bf\timesnewroman\zihao{4}\text{Abstract: }\timesnewroman\zihao{-4} #1
     \\
-    \par \noindent\fontspec{Times New Roman}\zihao{4}\text{Key words: } \fontspec{Times New Roman}\zihao{-4} #2}
+    \par \noindent\timesnewroman\zihao{4}\text{Key words: } \timesnewroman\zihao{-4} #2}
 }
 %=======空格
 \newcommand\HUNNUspace{\phantom{永}}

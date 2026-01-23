@@ -99,7 +99,7 @@
 \setCJKmainfont{../shared/simsun.ttc}
 \setCJKfamilyfont{song}{../shared/simsun.ttc}
 \setCJKfamilyfont{hei}{../shared/simhei.ttf}
-\setCJKfamilyfont{kai}{../shared/simsun.ttc}
+\setCJKfamilyfont{kai}{../shared/kaiti_GB2312.TTF}
 \setCJKfamilyfont{fang}{../shared/simsun.ttc}
 
 % 定义字体
