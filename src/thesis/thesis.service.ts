@@ -154,8 +154,8 @@ export class ThesisService {
     try {
       await this.jobService.updateJobStatus(jobId, JobStatus.PROCESSING, 10);
 
-      // Get template by schoolId (templateId is actually schoolId from user)
-      const template = this.templateService.findOneBySchool(templateId);
+      // Get template by ID
+      const template = this.templateService.findOne(templateId);
       await this.jobService.updateJobProgress(jobId, 30);
 
       // Render LaTeX and compile to PDF (with images if available)
@@ -423,8 +423,8 @@ export class ThesisService {
     // Parse content with LLM
     const document = await this.parseContent(text, format, images, userToken);
 
-    // Get template
-    const template = this.templateService.findOneBySchool(templateId);
+    // Get template by ID
+    const template = this.templateService.findOne(templateId);
 
     // Render LaTeX and compile to PDF synchronously
     const jobId = uuidv4();

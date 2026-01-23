@@ -267,14 +267,15 @@ export class ExtractionService {
       fs.writeFileSync(tmpPdf, fileBuffer);
       fs.mkdirSync(tmpDir, { recursive: true });
 
-      // 调用 Python 脚本
+      // 调用 Python 脚本 (2>/dev/null redirects stderr to prevent warnings from mixing with JSON)
       const scriptPath = path.join(__dirname, '../../scripts/extract_pdf.py');
       const output = execSync(
-        `python3 "${scriptPath}" "${tmpPdf}" "${tmpDir}"`,
+        `python3 "${scriptPath}" "${tmpPdf}" "${tmpDir}" 2>/dev/null`,
         { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 },
       );
 
-      const result = JSON.parse(output);
+      // Parse JSON with defensive handling for any remaining non-JSON output
+      const result = this.parseJsonFromOutput(output);
 
       // 读取提取的图片
       for (const img of result.images) {
@@ -394,5 +395,35 @@ export class ExtractionService {
         `PDF extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
+  }
+
+  /**
+   * Safely parse JSON from command output, handling cases where
+   * the output contains markdown fences, descriptions, or other text
+   * surrounding the JSON object
+   */
+  private parseJsonFromOutput(output: string): any {
+    const trimmed = output.trim();
+
+    // Fast path: output starts with valid JSON
+    if (trimmed.startsWith('{')) {
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        // Fall through to regex extraction
+      }
+    }
+
+    // Use regex to find the outermost JSON object { ... }
+    // This handles cases like: "```json\n{...}\n```" or "Here is the result:\n{...}"
+    const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      this.logger.error('No JSON object found in Python output:', trimmed.substring(0, 200));
+      throw new Error('No JSON found in Python script output');
+    }
+
+    const jsonStr = jsonMatch[0];
+    this.logger.warn('Extracted JSON from output with surrounding text');
+    return JSON.parse(jsonStr);
   }
 }
