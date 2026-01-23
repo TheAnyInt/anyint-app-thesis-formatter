@@ -19,30 +19,73 @@ UNICODE_MATH_CHARS = set('𝛼𝛽𝛾𝛿𝜀𝜁𝜂𝜃𝜄𝜅𝜆𝜇𝜈�
                          '∑∏∫∬∭∮∯∰∇∂∆∀∃∈∉⊂⊃⊆⊇∪∩∧∨¬⊕⊗⊙'
                          '≤≥≠≈≡≢∝∞±×÷√∛∜')
 
+def is_formula_line(line: str) -> bool:
+    """Check if a line is part of a formula"""
+    stripped = line.strip()
+    if not stripped:
+        return False
+
+    # Count Unicode math characters
+    math_count = sum(1 for c in stripped if c in UNICODE_MATH_CHARS)
+
+    # Check for formula indicators
+    has_math_symbol = any(c in stripped for c in '∑∏∫∂∇=±×÷')
+    has_significant_math = math_count >= 2
+
+    # Short lines with math chars (like "𝑁", "𝑖=1", "𝐿= −")
+    is_short_math = len(stripped) <= 10 and math_count >= 1
+
+    # Lines that look like formula parts
+    is_formula_part = re.match(r'^[𝑎-𝑧𝐴-𝑍a-zA-Z]=', stripped) is not None
+    is_subscript_part = re.match(r'^[𝑖𝑗𝑘ijk]=\d', stripped) is not None
+
+    return has_math_symbol or has_significant_math or is_short_math or is_formula_part or is_subscript_part
+
+
 def mark_formulas(text: str) -> str:
     """
     Detect and mark potential formulas containing Unicode math symbols.
-    This helps the LLM identify formulas that need conversion to LaTeX.
+    Groups consecutive formula lines into a single block.
     """
     lines = text.split('\n')
     result = []
+    formula_buffer = []
 
-    for line in lines:
-        # Count Unicode math characters in this line
-        math_count = sum(1 for c in line if c in UNICODE_MATH_CHARS)
+    def flush_formula_buffer():
+        """Output the formula buffer as a single block"""
+        nonlocal formula_buffer
+        if not formula_buffer:
+            return
 
-        # If line contains significant Unicode math, mark it as a formula
-        if math_count >= 3 or (math_count >= 1 and any(c in line for c in '∑∏∫∂∇')):
-            # Find the formula portion (continuous text with math symbols)
-            # Look for sequences containing math symbols
-            marked_line = line
-            # Simple heuristic: if we have math symbols, wrap the whole content
-            # The LLM will clean this up
-            if not line.strip().startswith('[FORMULA:'):
-                marked_line = f'[FORMULA: {line.strip()} :END_FORMULA]'
-            result.append(marked_line)
+        if len(formula_buffer) == 1:
+            # Single line formula
+            result.append(f'[FORMULA: {formula_buffer[0].strip()} :END_FORMULA]')
         else:
+            # Multi-line formula block - join with special separator
+            content = ' '.join(line.strip() for line in formula_buffer if line.strip())
+            result.append(f'[FORMULA_BLOCK: {content} :END_FORMULA_BLOCK]')
+
+        formula_buffer = []
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+
+        if is_formula_line(line):
+            formula_buffer.append(line)
+        else:
+            # Not a formula line
+            if formula_buffer:
+                # Check if this non-formula line is "其中" which often follows formulas
+                if stripped.startswith('其中') and any(c in stripped for c in UNICODE_MATH_CHARS):
+                    formula_buffer.append(line)
+                    continue
+
+                flush_formula_buffer()
+
             result.append(line)
+
+    # Flush any remaining formula content
+    flush_formula_buffer()
 
     return '\n'.join(result)
 
