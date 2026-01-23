@@ -70,7 +70,8 @@ export const njulife2Template = {
 
 \\setCJKmainfont{simsun.ttc}
 \\usepackage{pdfpages}
-\\setmainfont{Times New Roman}
+% 使用TeX Gyre Termes (开源替代Times New Roman)
+\\setmainfont{TeX Gyre Termes}
 
 \\renewcommand{\\algorithmicrequire}{ \\textbf{输入:}}
 \\renewcommand{\\algorithmicensure}{ \\textbf{初始化:}}

@@ -33,7 +33,8 @@ export const thuTemplate = {
 
 % 字体设置 - 使用本地字体文件
 \\usepackage{fontspec}
-\\setmainfont{Times New Roman}
+% 使用TeX Gyre Termes (开源替代Times New Roman)
+\\setmainfont{TeX Gyre Termes}
 \\setCJKmainfont{simsun.ttc}
 \\setCJKsansfont{simhei.ttf}
 \\setCJKmonofont{simhei.ttf}

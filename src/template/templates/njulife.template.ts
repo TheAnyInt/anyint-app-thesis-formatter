@@ -62,9 +62,10 @@ export const njulifeTemplate = {
 }
 
 %% ==================== 字体设置 ====================
-\\setmainfont{Times New Roman}
-\\setsansfont{DejaVu Sans}
-\\setmonofont{DejaVu Sans Mono}
+% 使用TeX Gyre字体系列 (开源替代Times New Roman/Arial等)
+\\setmainfont{TeX Gyre Termes}
+\\setsansfont{TeX Gyre Heros}
+\\setmonofont{TeX Gyre Cursor}
 \\setCJKmainfont{simsun.ttc}
 
 %% ==================== 字号命令 ====================
