@@ -52,12 +52,28 @@ class CoverPdfModifier:
         """Load the PDF document"""
         self.doc = fitz.open(self.input_pdf)
 
-        # Find Chinese font
-        for font_file in ['simsun.ttc', 'simsun.ttf', 'SimSun.ttc', 'SimSun.ttf']:
-            font_path = os.path.join(self.font_dir, font_file)
-            if os.path.exists(font_path):
-                self._chinese_font_path = font_path
+        # Find Chinese font - check multiple directories
+        font_search_dirs = [
+            self.font_dir,  # Template-specific directory
+            os.path.join(os.path.dirname(self.font_dir), 'shared'),  # templates/shared/
+            os.path.expanduser('~/.local/share/fonts'),  # User fonts
+            '/usr/share/fonts/truetype',  # System fonts
+        ]
+
+        for search_dir in font_search_dirs:
+            if not os.path.exists(search_dir):
+                continue
+            for font_file in ['simsun.ttc', 'simsun.ttf', 'SimSun.ttc', 'SimSun.ttf']:
+                font_path = os.path.join(search_dir, font_file)
+                if os.path.exists(font_path):
+                    self._chinese_font_path = font_path
+                    print(f"Found font: {font_path}", file=sys.stderr)
+                    break
+            if self._chinese_font_path:
                 break
+
+        if not self._chinese_font_path:
+            print("Warning: No Chinese font found, text insertion may fail", file=sys.stderr)
 
     def _find_text_rect(self, page: fitz.Page, search_text: str) -> Optional[fitz.Rect]:
         """Find the bounding rectangle of text on a page"""
