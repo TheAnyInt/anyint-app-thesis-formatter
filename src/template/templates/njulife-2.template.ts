@@ -68,10 +68,9 @@ export const njulife2Template = {
 \\numberwithin{equation}{section}
 \\renewcommand\\theequation{\\thesection-\\arabic{equation}}
 
-\\setCJKmainfont{simsun.ttc}
+% 中文字体使用bundled字体文件，英文使用默认Latin Modern
+\\setCJKmainfont{simsun.ttc}[AutoFakeBold=2.5]
 \\usepackage{pdfpages}
-% 使用TeX Gyre Termes (开源替代Times New Roman)
-\\setmainfont{TeX Gyre Termes}
 
 \\renewcommand{\\algorithmicrequire}{ \\textbf{输入:}}
 \\renewcommand{\\algorithmicensure}{ \\textbf{初始化:}}

@@ -62,11 +62,10 @@ export const njulifeTemplate = {
 }
 
 %% ==================== 字体设置 ====================
-% 使用TeX Gyre字体系列 (开源替代Times New Roman/Arial等)
-\\setmainfont{TeX Gyre Termes}
-\\setsansfont{TeX Gyre Heros}
-\\setmonofont{TeX Gyre Cursor}
-\\setCJKmainfont{simsun.ttc}
+% 英文使用默认Latin Modern字体 (tectonic自带，无需指定)
+% 中文使用bundled字体文件
+\\setCJKmainfont{simsun.ttc}[AutoFakeBold=2.5]
+\\setCJKsansfont{simhei.ttf}[AutoFakeBold=2.5]
 
 %% ==================== 字号命令 ====================
 \\newcommand{\\chuhao}{\\fontsize{42pt}{50.4pt}\\selectfont}

@@ -31,11 +31,9 @@ export const thuTemplate = {
 % 页面设置
 \\usepackage[top=3.8cm, bottom=3.2cm, left=3.2cm, right=3cm]{geometry}
 
-% 字体设置 - 使用本地字体文件
+% 字体设置 - 中文使用bundled字体文件，英文使用默认Latin Modern
 \\usepackage{fontspec}
-% 使用TeX Gyre Termes (开源替代Times New Roman)
-\\setmainfont{TeX Gyre Termes}
-\\setCJKmainfont{simsun.ttc}
+\\setCJKmainfont{simsun.ttc}[AutoFakeBold=2.5]
 \\setCJKsansfont{simhei.ttf}
 \\setCJKmonofont{simhei.ttf}
 \\newCJKfontfamily\\heiti{simhei.ttf}
