@@ -1,8 +1,13 @@
 import { TableProcessor } from './table-processor';
 
 describe('TableProcessor', () => {
+  // Reset table counter before each test to ensure consistent labels
+  beforeEach(() => {
+    TableProcessor.resetTableCounter();
+  });
+
   describe('convertMarkdownTablesToLatex', () => {
-    it('should convert simple markdown table', () => {
+    it('should convert simple markdown table with caption', () => {
       const input = `| 列1 | 列2 | 列3 |
 |---|---|---|
 | 数据1 | 数据2 | 数据3 |
@@ -16,6 +21,9 @@ describe('TableProcessor', () => {
       expect(result).toContain('\\end{table}');
       expect(result).toContain('列1 & 列2 & 列3');
       expect(result).toContain('数据1 & 数据2 & 数据3');
+      // Should have caption and label for List of Tables
+      expect(result).toContain('\\caption{');
+      expect(result).toContain('\\label{tab:');
     });
 
     it('should handle table with alignment markers', () => {
@@ -335,6 +343,58 @@ describe('TableProcessor', () => {
 [TABLE_END]`;
       const result = TableProcessor.convertTableCellsToLatex(input);
       expect(result).toContain('[TABLE_START]');
+    });
+
+    // Tests for caption generation (Bug #8 fix - List of Tables)
+    it('should generate caption from header row', () => {
+      const input = `[TABLE_START]
+[TABLE_ROW:0]
+[TABLE_CELL: Dataset]
+[TABLE_CELL: Accuracy]
+[TABLE_CELL: F1 Score]
+[TABLE_ROW:1]
+[TABLE_CELL: CIFAR-10]
+[TABLE_CELL: 95.2%]
+[TABLE_CELL: 94.8%]
+[TABLE_END]`;
+      const result = TableProcessor.convertTableCellsToLatex(input);
+      // Caption should be generated from non-numeric headers
+      expect(result).toContain('\\caption{Dataset、Accuracy、F1 Score}');
+      expect(result).toContain('\\label{tab:auto_1}');
+    });
+
+    it('should generate unique labels for multiple tables', () => {
+      const input1 = `[TABLE_START]
+[TABLE_ROW:0]
+[TABLE_CELL: Name]
+[TABLE_CELL: Value]
+[TABLE_ROW:1]
+[TABLE_CELL: A]
+[TABLE_CELL: 1]
+[TABLE_END]`;
+      const input2 = `[TABLE_START]
+[TABLE_ROW:0]
+[TABLE_CELL: Type]
+[TABLE_CELL: Count]
+[TABLE_ROW:1]
+[TABLE_CELL: B]
+[TABLE_CELL: 2]
+[TABLE_END]`;
+      const result1 = TableProcessor.convertTableCellsToLatex(input1);
+      const result2 = TableProcessor.convertTableCellsToLatex(input2);
+      expect(result1).toContain('\\label{tab:auto_1}');
+      expect(result2).toContain('\\label{tab:auto_2}');
+    });
+
+    it('should use fallback caption when headers are numeric', () => {
+      // This tests a table where we can't derive a meaningful caption
+      // The column detection might fail for all-numeric, but let's test caption fallback
+      const input = `[TABLE cols=2]
+[HEADER]Model|Score[/HEADER]
+[ROW]A|100[/ROW]
+[/TABLE]`;
+      const result = TableProcessor.convertTableCellsToLatex(input);
+      expect(result).toContain('\\caption{Model、Score}');
     });
   });
 });

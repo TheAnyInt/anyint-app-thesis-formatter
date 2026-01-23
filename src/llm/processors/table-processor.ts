@@ -6,6 +6,64 @@ const logger = new Logger('TableProcessor');
  * Table processing utilities for converting various table formats to LaTeX
  */
 export class TableProcessor {
+  // Counter for generating unique table labels
+  private static tableCounter = 0;
+
+  /**
+   * Reset table counter (useful for testing or new documents)
+   */
+  static resetTableCounter(): void {
+    this.tableCounter = 0;
+  }
+
+  /**
+   * Generate a caption from header row content
+   * Creates a meaningful caption for List of Tables
+   */
+  private static generateCaption(headers: string[]): string {
+    if (!headers || headers.length === 0) return '表格数据';
+
+    // Filter out purely numeric or empty headers
+    const meaningfulHeaders = headers.filter(h =>
+      h && !/^[\d,.\-+%]+$/.test(h.trim())
+    );
+
+    if (meaningfulHeaders.length === 0) return '表格数据';
+
+    // Use first 2-3 meaningful headers to create caption
+    const captionParts = meaningfulHeaders.slice(0, 3);
+    return captionParts.join('、');
+  }
+
+  /**
+   * Build a complete LaTeX table with caption and label
+   */
+  private static buildLatexTable(rows: string[][], numCols: number): string {
+    this.tableCounter++;
+    const colSpec = '|' + 'c|'.repeat(numCols);
+    const caption = this.generateCaption(rows[0]);
+    const label = `tab:auto_${this.tableCounter}`;
+
+    let latex = '\\begin{table}[H]\n\\centering\n';
+    latex += `\\caption{${caption}}\n`;
+    latex += `\\label{${label}}\n`;
+    latex += `\\begin{tabular}{${colSpec}}\n\\hline\n`;
+
+    // Header row
+    latex += rows[0].join(' & ') + ' \\\\\\\\ \\hline\n';
+
+    // Data rows
+    for (let i = 1; i < rows.length; i++) {
+      const row = [...rows[i]];
+      // Ensure row has correct number of columns
+      while (row.length < numCols) row.push('');
+      latex += row.slice(0, numCols).join(' & ') + ' \\\\\\\\ \\hline\n';
+    }
+
+    latex += '\\end{tabular}\n\\end{table}';
+    return latex;
+  }
+
   // Classify cell into a type based on content
   private static getCellType(cell: string): string {
     if (/^[\d,.\-+%]+$/.test(cell)) return 'num';
@@ -119,19 +177,9 @@ export class TableProcessor {
           }
         }
 
-        // Build LaTeX table
-        const colSpec = '|' + 'c|'.repeat(numCols);
-        let latex = '\\begin{table}[H]\n\\centering\n';
-        latex += `\\begin{tabular}{${colSpec}}\n\\hline\n`;
-        latex += headers.join(' & ') + ' \\\\\\\\ \\hline\n';
-        for (const row of rows) {
-          // Ensure row has correct number of columns
-          while (row.length < numCols) row.push('');
-          latex += row.slice(0, numCols).join(' & ') + ' \\\\\\\\ \\hline\n';
-        }
-        latex += '\\end{tabular}\n\\end{table}';
-
-        return latex;
+        // Build LaTeX table with caption
+        const allRows = [headers, ...rows];
+        return this.buildLatexTable(allRows, numCols);
       } catch (e) {
         logger.warn(`Failed to convert markdown table: ${e}`);
         return match;
@@ -173,16 +221,8 @@ export class TableProcessor {
 
         if (rows.length < 2) return match;
 
-        // Build LaTeX
-        const colSpec = '|' + 'c|'.repeat(numCols);
-        let latex = '\\begin{table}[H]\n\\centering\n';
-        latex += `\\begin{tabular}{${colSpec}}\n\\hline\n`;
-        latex += rows[0].join(' & ') + ' \\\\\\\\ \\hline\n';
-        for (let i = 1; i < rows.length; i++) {
-          latex += rows[i].join(' & ') + ' \\\\\\\\ \\hline\n';
-        }
-        latex += '\\end{tabular}\n\\end{table}';
-        return latex;
+        // Build LaTeX with caption
+        return this.buildLatexTable(rows, numCols);
       } catch (e) {
         logger.warn(`Failed to convert structured table format: ${e}`);
         return match;
@@ -220,24 +260,8 @@ export class TableProcessor {
           const numCols = rows[0].length;
           if (numCols === 0) return match;
 
-          // Build LaTeX table
-          const colSpec = '|' + 'c|'.repeat(numCols);
-          let latex = '\\begin{table}[H]\n\\centering\n';
-          latex += `\\begin{tabular}{${colSpec}}\n\\hline\n`;
-
-          // Header row
-          latex += rows[0].join(' & ') + ' \\\\\\\\ \\hline\n';
-
-          // Data rows
-          for (let i = 1; i < rows.length; i++) {
-            // Ensure row has correct number of columns
-            const row = rows[i];
-            while (row.length < numCols) row.push('');
-            latex += row.slice(0, numCols).join(' & ') + ' \\\\\\\\ \\hline\n';
-          }
-
-          latex += '\\end{tabular}\n\\end{table}';
-          return latex;
+          // Build LaTeX table with caption
+          return this.buildLatexTable(rows, numCols);
         }
 
         // Fallback: old [TABLE_START]...[TABLE_END] format without row markers
@@ -291,21 +315,8 @@ export class TableProcessor {
           return match;
         }
 
-        // Build LaTeX table
-        const colSpec = '|' + 'c|'.repeat(numCols);
-        let latex = '\\begin{table}[H]\n\\centering\n';
-        latex += `\\begin{tabular}{${colSpec}}\n\\hline\n`;
-
-        // Header row
-        latex += rows[0].join(' & ') + ' \\\\\\\\ \\hline\n';
-
-        // Data rows
-        for (let i = 1; i < rows.length; i++) {
-          latex += rows[i].join(' & ') + ' \\\\\\\\ \\hline\n';
-        }
-
-        latex += '\\end{tabular}\n\\end{table}';
-        return latex;
+        // Build LaTeX table with caption
+        return this.buildLatexTable(rows, numCols);
       } catch (e) {
         logger.warn(`Failed to convert TABLE_CELL format: ${e}`);
         return match;
