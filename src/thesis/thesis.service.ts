@@ -336,18 +336,20 @@ export class ThesisService {
   }
 
   /**
-   * Step 1 (New Flow): Analyze document without LLM generation
-   * Extract raw content and compare against template requirements
+   * Step 1 (New Flow): Analyze document with AI
+   * Extract content using AI and compare against template requirements
+   * Different templates will produce different analysis results based on their requirements
    */
   async analyzeDocument(
     fileBuffer: Buffer,
     format: InputFormat,
     templateId: string,
     userToken?: string,
+    model?: string,
   ): Promise<AnalysisResult> {
-    this.logger.log(`Analyzing document with template: ${templateId}`);
+    this.logger.log(`Analyzing document with template: ${templateId}${model ? `, model: ${model}` : ''}`);
 
-    // Extract text and images based on format (NO LLM)
+    // Extract text and images based on format
     let text: string;
     let images = new Map<string, ExtractedImage>();
 
@@ -365,10 +367,14 @@ export class ThesisService {
       text = fileBuffer.toString('utf-8');
     }
 
-    // Parse structure without LLM (using regex/heuristics)
-    const extractedData = this.parseWithoutGeneration(text, images);
+    // Use AI parsing to extract content
+    this.logger.log('Using AI to parse document content...');
+    const parsedDocument = await this.parseContent(text, format, images, userToken, model);
 
-    // Get template and analyze completeness
+    // Convert Record<string, any> to ThesisData type
+    const extractedData = parsedDocument as ThesisData;
+
+    // Get template and analyze completeness against template-specific requirements
     const template = this.templateService.findOne(templateId);
     const analysis = this.analysisService.analyzeDocument(extractedData, template);
 
@@ -393,7 +399,7 @@ export class ThesisService {
       url: `/thesis/analyses/${analysisId}/images/${id}`,
     }));
 
-    this.logger.log(`Created analysis ${analysisId} with ${imageList.length} images`);
+    this.logger.log(`Created analysis ${analysisId} for template ${templateId} with ${imageList.length} images`);
 
     // Clean up old analyses (keep for 1 hour)
     this.cleanupOldAnalyses();
@@ -406,6 +412,7 @@ export class ThesisService {
         requiredSections: template.requiredSections,
       },
       analysis,
+      model,
       images: imageList,
       createdAt,
       expiresAt,

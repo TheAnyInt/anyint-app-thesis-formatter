@@ -41,7 +41,7 @@ const headers = {
 
 ## 完整工作流程
 
-### 第1步：分析文档
+### 第1步：分析文档（AI驱动）
 
 #### 接口
 ```
@@ -49,12 +49,22 @@ POST /thesis/analyze
 Content-Type: multipart/form-data
 ```
 
+**🆕 重要更新**：此端点现在使用AI进行内容提取，可以准确识别非结构化文档和自然语言内容。
+
 #### 请求参数
 ```javascript
 const formData = new FormData();
 formData.append('file', fileObject);           // File对象
-formData.append('templateId', 'njulife-2');    // 模板ID
+formData.append('templateId', 'njulife-2');    // 模板ID（必填）
+formData.append('model', 'gpt-4o');            // 可选：指定LLM模型
 ```
+
+#### 分析特点
+- ✅ **AI智能提取**：使用LLM理解文档内容，支持任意格式和非结构化文档
+- ✅ **模板感知**：不同模板产生不同的分析结果（基于模板的requiredFields和requiredSections）
+- ✅ **长文档支持**：自动处理大文档（>45k字符自动分块处理）
+- ✅ **多语言支持**：同时处理中英文内容
+- ⏱️ **处理时间**：短文档约3-5秒，长文档可能需要更长时间
 
 #### 响应示例
 ```json
@@ -117,6 +127,7 @@ formData.append('templateId', 'njulife-2');    // 模板ID
       "致谢部分缺失。您可能想添加此部分。"
     ]
   },
+  "model": "gpt-4o",                     // 使用的LLM模型
   "images": [
     {
       "id": "docximg1",
@@ -132,10 +143,11 @@ formData.append('templateId', 'njulife-2');    // 模板ID
 
 #### 前端处理
 ```javascript
-async function analyzeThesis(file, templateId) {
+async function analyzeThesis(file, templateId, model = 'gpt-4o') {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('templateId', templateId);
+  formData.append('model', model);  // 可选：指定LLM模型
 
   const response = await fetch(`${API_BASE}/thesis/analyze`, {
     method: 'POST',

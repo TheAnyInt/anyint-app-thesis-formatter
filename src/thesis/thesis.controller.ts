@@ -195,14 +195,14 @@ export class ThesisController {
   }
 
   /**
-   * Step 1 (New Flow): Analyze document without LLM generation
-   * Extract content and compare against template requirements
+   * Step 1 (New Flow): Analyze document with AI
+   * Extract content with AI and compare against template requirements
    */
   @Post('analyze')
   @ApiOperation({
-    summary: 'Analyze document against template (no AI generation)',
+    summary: 'Analyze document against template with AI',
     description:
-      'Extract raw content from document and analyze completeness against template requirements. Returns analysis with suggestions for what to generate.',
+      'Extract content from document using AI and analyze completeness against template requirements. Returns analysis with suggestions for what to generate. Different templates produce different analysis results based on their specific requirements.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -219,6 +219,11 @@ export class ThesisController {
           description: 'Template ID to analyze against (e.g., njulife-2, thu)',
           example: 'njulife-2',
         },
+        model: {
+          type: 'string',
+          description: 'LLM model to use (optional, e.g., gpt-4o, DeepSeek-V3.2-Exp)',
+          example: 'gpt-4o',
+        },
       },
       required: ['file', 'templateId'],
     },
@@ -232,13 +237,14 @@ export class ThesisController {
         extractedData: { type: 'object' },
         templateRequirements: { type: 'object' },
         analysis: { type: 'object' },
+        model: { type: 'string' },
         images: { type: 'array' },
         createdAt: { type: 'string' },
         expiresAt: { type: 'string' },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Invalid file type or missing templateId' })
+  @ApiResponse({ status: 400, description: 'Invalid file type, model, or missing templateId' })
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
@@ -261,9 +267,10 @@ export class ThesisController {
   async analyzeDocument(
     @UploadedFile() file: Express.Multer.File,
     @Body('templateId') templateId: string,
+    @Body('model') model: string | undefined,
     @Req() req: Request,
   ) {
-    this.logger.log(`Analyzing document: ${file?.originalname || 'unknown'} with template: ${templateId}`);
+    this.logger.log(`Analyzing document: ${file?.originalname || 'unknown'} with template: ${templateId}${model ? `, model: ${model}` : ''}`);
 
     if (!file) {
       throw new BadRequestException('No file uploaded');
@@ -272,6 +279,9 @@ export class ThesisController {
     if (!templateId) {
       throw new BadRequestException('templateId is required');
     }
+
+    // Validate and resolve model
+    const resolvedModel = this.modelConfigService.resolveModel(model);
 
     const ext = path.extname(file.originalname).toLowerCase();
     const format = ext === '.docx' ? 'docx' : ext === '.pdf' ? 'pdf' : ext === '.md' ? 'markdown' : 'txt';
@@ -282,6 +292,7 @@ export class ThesisController {
       format,
       templateId,
       userToken,
+      resolvedModel,
     );
 
     return result;

@@ -94,6 +94,7 @@ export interface AnalysisResult {
     requiredSections: string[];
   };
   analysis: DocumentAnalysis;
+  model?: string; // LLM model used for analysis
   images: Array<{
     id: string;
     filename: string;

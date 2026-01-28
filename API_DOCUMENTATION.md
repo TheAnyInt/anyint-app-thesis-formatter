@@ -23,11 +23,13 @@ http://localhost:3000/thesis
 
 ## 🆕 New 3-Step Workflow
 
-### Step 1: Analyze Document
+### Step 1: Analyze Document (AI-Powered)
 
 **Endpoint:** `POST /thesis/analyze`
 
-**Purpose:** Extract raw content and analyze completeness WITHOUT AI generation.
+**Purpose:** Extract content using AI and analyze completeness against template requirements.
+
+**🆕 Update:** This endpoint now uses AI for intelligent content extraction, supporting non-structured documents and natural language.
 
 **Request:**
 ```http
@@ -37,7 +39,15 @@ Authorization: Bearer <token>
 
 file: <document-file>          # .docx, .pdf, .txt, .md (max 50MB)
 templateId: "njulife-2"        # Required template ID
+model: "gpt-4o"                # Optional: LLM model (default: gpt-4o)
 ```
+
+**Features:**
+- ✅ AI-powered extraction (handles any document format)
+- ✅ Template-aware analysis (different templates → different results)
+- ✅ Long document support (>45k chars auto-chunked)
+- ✅ Multi-language support (Chinese + English)
+- ⏱️ Processing time: ~3-5 seconds for short docs, more for long docs
 
 **Response:**
 ```json
@@ -86,6 +96,7 @@ templateId: "njulife-2"        # Required template ID
       "Found 5 sections with sparse content"
     ]
   },
+  "model": "gpt-4o",                   // LLM model used for analysis
   "images": [
     {
       "id": "docximg1",
