@@ -21,6 +21,15 @@ import {
   calculateRetryDelay,
 } from './section-processor';
 import { ThesisDataWithWarnings, mergeThesisResults } from './thesis-merger';
+import {
+  buildMetadataPrompt,
+  buildAbstractPrompt,
+  buildKeywordsPrompt,
+  buildSectionEnhancementPrompt,
+  buildMissingSectionsPrompt,
+  buildReferencesPrompt,
+  buildAcknowledgementsPrompt,
+} from './prompts';
 
 // Threshold for switching to multi-phase processing
 const LONG_CONTENT_THRESHOLD = 45000;
@@ -160,6 +169,206 @@ export class LlmService {
         `Multi-phase LLM parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
+  }
+
+  /**
+   * Generate only user-specified fields using targeted LLM calls
+   * This enables selective AI generation instead of all-or-nothing
+   */
+  async generateSelectiveFields(
+    originalContent: string,
+    extractedData: ThesisData,
+    generateFields: {
+      metadata?: string[];
+      abstract?: boolean;
+      abstract_en?: boolean;
+      keywords?: boolean;
+      keywords_en?: boolean;
+      sections?: {
+        enhance: boolean;
+        addMissing: string[];
+      };
+      references?: boolean;
+      acknowledgements?: boolean;
+    },
+    userToken?: string,
+    model?: string,
+  ): Promise<Partial<ThesisData>> {
+    const resolvedModel = model || this.modelConfigService.getDefaultModel();
+    this.logger.log(`Generating selective fields with model: ${resolvedModel}`);
+
+    const generated: Partial<ThesisData> = {};
+
+    // Generate metadata fields if requested
+    if (generateFields.metadata && generateFields.metadata.length > 0) {
+      this.logger.log(`Generating metadata fields: ${generateFields.metadata.join(', ')}`);
+      try {
+        const prompt = buildMetadataPrompt(
+          originalContent,
+          generateFields.metadata,
+          extractedData.metadata,
+        );
+        const response = await this.makeLlmCall(prompt, userToken, 2000, resolvedModel);
+        const metadataResult = JSON.parse(response);
+
+        // Merge with existing metadata
+        generated.metadata = {
+          ...extractedData.metadata,
+          ...metadataResult,
+        };
+      } catch (error) {
+        this.logger.error('Failed to generate metadata', error);
+      }
+    }
+
+    // Generate abstract if requested
+    if (generateFields.abstract) {
+      this.logger.log('Generating Chinese abstract');
+      try {
+        const prompt = buildAbstractPrompt(
+          originalContent,
+          extractedData.abstract,
+          'zh',
+        );
+        const response = await this.makeLlmCall(prompt, userToken, 4000, resolvedModel);
+        const result = JSON.parse(response);
+        generated.abstract = result.abstract;
+      } catch (error) {
+        this.logger.error('Failed to generate abstract', error);
+      }
+    }
+
+    // Generate English abstract if requested
+    if (generateFields.abstract_en) {
+      this.logger.log('Generating English abstract');
+      try {
+        const prompt = buildAbstractPrompt(
+          originalContent,
+          extractedData.abstract_en,
+          'en',
+        );
+        const response = await this.makeLlmCall(prompt, userToken, 4000, resolvedModel);
+        const result = JSON.parse(response);
+        generated.abstract_en = result.abstract;
+      } catch (error) {
+        this.logger.error('Failed to generate English abstract', error);
+      }
+    }
+
+    // Generate Chinese keywords if requested
+    if (generateFields.keywords) {
+      this.logger.log('Generating Chinese keywords');
+      try {
+        const prompt = buildKeywordsPrompt(
+          originalContent,
+          extractedData.keywords,
+          'zh',
+        );
+        const response = await this.makeLlmCall(prompt, userToken, 1000, resolvedModel);
+        const result = JSON.parse(response);
+        generated.keywords = result.keywords;
+      } catch (error) {
+        this.logger.error('Failed to generate keywords', error);
+      }
+    }
+
+    // Generate English keywords if requested
+    if (generateFields.keywords_en) {
+      this.logger.log('Generating English keywords');
+      try {
+        const prompt = buildKeywordsPrompt(
+          originalContent,
+          extractedData.keywords_en,
+          'en',
+        );
+        const response = await this.makeLlmCall(prompt, userToken, 1000, resolvedModel);
+        const result = JSON.parse(response);
+        generated.keywords_en = result.keywords;
+      } catch (error) {
+        this.logger.error('Failed to generate English keywords', error);
+      }
+    }
+
+    // Enhance or generate sections if requested
+    if (generateFields.sections) {
+      const newSections: Section[] = [...extractedData.sections];
+
+      // Enhance existing sections
+      if (generateFields.sections.enhance && extractedData.sections.length > 0) {
+        this.logger.log(`Enhancing ${extractedData.sections.length} existing sections`);
+        try {
+          const prompt = buildSectionEnhancementPrompt(
+            extractedData.sections,
+            originalContent,
+          );
+          const response = await this.makeLlmCall(prompt, userToken, 16000, resolvedModel);
+          const result = JSON.parse(response);
+          if (result.sections && Array.isArray(result.sections)) {
+            // Replace with enhanced sections
+            newSections.splice(0, newSections.length, ...result.sections);
+          }
+        } catch (error) {
+          this.logger.error('Failed to enhance sections', error);
+        }
+      }
+
+      // Generate missing sections
+      if (generateFields.sections.addMissing && generateFields.sections.addMissing.length > 0) {
+        this.logger.log(`Generating ${generateFields.sections.addMissing.length} missing sections`);
+        try {
+          const prompt = buildMissingSectionsPrompt(
+            generateFields.sections.addMissing,
+            extractedData.sections,
+            originalContent,
+          );
+          const response = await this.makeLlmCall(prompt, userToken, 16000, resolvedModel);
+          const result = JSON.parse(response);
+          if (result.sections && Array.isArray(result.sections)) {
+            // Append missing sections
+            newSections.push(...result.sections);
+          }
+        } catch (error) {
+          this.logger.error('Failed to generate missing sections', error);
+        }
+      }
+
+      generated.sections = newSections;
+    }
+
+    // Generate references if requested
+    if (generateFields.references) {
+      this.logger.log('Generating references');
+      try {
+        const prompt = buildReferencesPrompt(
+          originalContent,
+          extractedData.references,
+        );
+        const response = await this.makeLlmCall(prompt, userToken, 4000, resolvedModel);
+        const result = JSON.parse(response);
+        generated.references = result.references;
+      } catch (error) {
+        this.logger.error('Failed to generate references', error);
+      }
+    }
+
+    // Generate acknowledgements if requested
+    if (generateFields.acknowledgements) {
+      this.logger.log('Generating acknowledgements');
+      try {
+        const prompt = buildAcknowledgementsPrompt(
+          originalContent,
+          extractedData.metadata,
+        );
+        const response = await this.makeLlmCall(prompt, userToken, 2000, resolvedModel);
+        const result = JSON.parse(response);
+        generated.acknowledgements = result.acknowledgements;
+      } catch (error) {
+        this.logger.error('Failed to generate acknowledgements', error);
+      }
+    }
+
+    this.logger.log('Selective field generation complete');
+    return generated;
   }
 
   /**

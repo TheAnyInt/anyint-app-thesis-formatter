@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ThesisController } from './thesis.controller';
 import { ThesisService } from './thesis.service';
+import { AnalysisService } from './analysis.service';
 import { DocumentModule } from '../document/document.module';
 import { LlmModule } from '../llm/llm.module';
 import { ReferenceModule } from '../reference/reference.module';
@@ -20,6 +21,6 @@ import { AuthModule } from '../auth/auth.module';
     AuthModule,
   ],
   controllers: [ThesisController],
-  providers: [ThesisService],
+  providers: [ThesisService, AnalysisService],
 })
 export class ThesisModule {}

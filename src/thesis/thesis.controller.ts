@@ -195,6 +195,219 @@ export class ThesisController {
   }
 
   /**
+   * Step 1 (New Flow): Analyze document without LLM generation
+   * Extract content and compare against template requirements
+   */
+  @Post('analyze')
+  @ApiOperation({
+    summary: 'Analyze document against template (no AI generation)',
+    description:
+      'Extract raw content from document and analyze completeness against template requirements. Returns analysis with suggestions for what to generate.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Document file (.docx, .pdf, .txt, .md)',
+        },
+        templateId: {
+          type: 'string',
+          description: 'Template ID to analyze against (e.g., njulife-2, thu)',
+          example: 'njulife-2',
+        },
+      },
+      required: ['file', 'templateId'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Analysis complete',
+    schema: {
+      properties: {
+        analysisId: { type: 'string' },
+        extractedData: { type: 'object' },
+        templateRequirements: { type: 'object' },
+        analysis: { type: 'object' },
+        images: { type: 'array' },
+        createdAt: { type: 'string' },
+        expiresAt: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid file type or missing templateId' })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB max
+      },
+      fileFilter: (req, file, callback) => {
+        const allowedExtensions = ['.docx', '.txt', '.md', '.pdf'];
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (allowedExtensions.includes(ext)) {
+          callback(null, true);
+        } else {
+          callback(
+            new BadRequestException('Only .docx, .txt, .md, .pdf files are allowed'),
+            false,
+          );
+        }
+      },
+    }),
+  )
+  async analyzeDocument(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('templateId') templateId: string,
+    @Req() req: Request,
+  ) {
+    this.logger.log(`Analyzing document: ${file?.originalname || 'unknown'} with template: ${templateId}`);
+
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    if (!templateId) {
+      throw new BadRequestException('templateId is required');
+    }
+
+    const ext = path.extname(file.originalname).toLowerCase();
+    const format = ext === '.docx' ? 'docx' : ext === '.pdf' ? 'pdf' : ext === '.md' ? 'markdown' : 'txt';
+
+    const userToken = this.extractUserToken(req);
+    const result = await this.thesisService.analyzeDocument(
+      file.buffer,
+      format,
+      templateId,
+      userToken,
+    );
+
+    return result;
+  }
+
+  /**
+   * Step 2 (New Flow): Generate only user-specified fields with AI
+   * Selective generation instead of all-or-nothing approach
+   */
+  @Post('generate')
+  @ApiOperation({
+    summary: 'Generate selected fields with AI',
+    description:
+      'Selectively generate only user-requested fields using LLM. User controls what gets AI-generated.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        analysisId: {
+          type: 'string',
+          description: 'Analysis ID from /analyze endpoint',
+        },
+        generateFields: {
+          type: 'object',
+          description: 'Specification of which fields to generate',
+          properties: {
+            metadata: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Metadata fields to generate (e.g., ["title", "keywords"])',
+            },
+            abstract: { type: 'boolean', description: 'Generate Chinese abstract' },
+            abstract_en: { type: 'boolean', description: 'Generate English abstract' },
+            keywords: { type: 'boolean', description: 'Generate Chinese keywords' },
+            keywords_en: { type: 'boolean', description: 'Generate English keywords' },
+            sections: {
+              type: 'object',
+              properties: {
+                enhance: { type: 'boolean', description: 'Enhance existing sections' },
+                addMissing: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Generate missing sections by name',
+                },
+              },
+            },
+            references: { type: 'boolean', description: 'Generate references' },
+            acknowledgements: { type: 'boolean', description: 'Generate acknowledgements' },
+          },
+        },
+        model: {
+          type: 'string',
+          description: 'LLM model to use (optional)',
+          example: 'gpt-4o',
+        },
+      },
+      required: ['analysisId', 'generateFields'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Fields generated successfully',
+    schema: {
+      properties: {
+        enrichedData: { type: 'object', description: 'Merged original + generated data' },
+        generatedFields: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'List of fields that were generated',
+        },
+        model: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request or model' })
+  @ApiResponse({ status: 404, description: 'Analysis not found or expired' })
+  async generateFields(
+    @Body()
+    body: {
+      analysisId: string;
+      generateFields: {
+        metadata?: string[];
+        abstract?: boolean;
+        abstract_en?: boolean;
+        keywords?: boolean;
+        keywords_en?: boolean;
+        sections?: {
+          enhance: boolean;
+          addMissing: string[];
+        };
+        references?: boolean;
+        acknowledgements?: boolean;
+      };
+      model?: string;
+    },
+    @Req() req: Request,
+  ) {
+    this.logger.log(`Generating fields for analysis: ${body.analysisId}${body.model ? `, model: ${body.model}` : ''}`);
+
+    if (!body.analysisId) {
+      throw new BadRequestException('analysisId is required');
+    }
+
+    if (!body.generateFields) {
+      throw new BadRequestException('generateFields is required');
+    }
+
+    // Validate and resolve model
+    const resolvedModel = this.modelConfigService.resolveModel(body.model);
+
+    const userToken = this.extractUserToken(req);
+    const result = await this.thesisService.generateFields(
+      body.analysisId,
+      body.generateFields,
+      userToken,
+      resolvedModel,
+    );
+
+    return {
+      ...result,
+      model: resolvedModel,
+    };
+  }
+
+  /**
    * Step 1: Extract content and images from file
    * Returns structured data for frontend preview/editing
    */
@@ -290,17 +503,89 @@ export class ThesisController {
   }
 
   /**
-   * Step 2: Render PDF from extraction
+   * Get image from analysis (for frontend preview)
+   */
+  @Get('analyses/:analysisId/images/:imageId')
+  async getAnalysisImage(
+    @Param('analysisId') analysisId: string,
+    @Param('imageId') imageId: string,
+    @Res() res: Response,
+  ) {
+    const image = this.thesisService.getAnalysisImage(analysisId, imageId);
+
+    res.set({
+      'Content-Type': image.contentType,
+      'Content-Length': image.buffer.length,
+      'Cache-Control': 'public, max-age=3600',
+    });
+
+    res.send(image.buffer);
+  }
+
+  /**
+   * Step 2/3: Render PDF from extraction or analysis
+   * Supports both old flow (extractionId) and new flow (analysisId)
    * Optionally accepts modified document data
    */
   @Post('render')
+  @ApiOperation({
+    summary: 'Render PDF from extraction or analysis',
+    description:
+      'Create PDF from extracted/analyzed data. Supports both old flow (extractionId) and new flow (analysisId).',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        extractionId: {
+          type: 'string',
+          description: 'Extraction ID from /extract endpoint (old flow)',
+        },
+        analysisId: {
+          type: 'string',
+          description: 'Analysis ID from /analyze endpoint (new flow)',
+        },
+        templateId: {
+          type: 'string',
+          description: 'Template ID to use',
+          example: 'njulife-2',
+        },
+        document: {
+          type: 'object',
+          description: 'Optional document override (for manual edits)',
+        },
+      },
+      required: ['templateId'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Rendering job created',
+    schema: {
+      properties: {
+        jobId: { type: 'string' },
+        status: { type: 'string' },
+        pollUrl: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request' })
+  @ApiResponse({ status: 404, description: 'Extraction/Analysis not found' })
   async renderFromExtraction(
-    @Body() body: { extractionId: string; templateId: string; document?: Record<string, any> },
+    @Body()
+    body: {
+      extractionId?: string;
+      analysisId?: string;
+      templateId: string;
+      document?: Record<string, any>;
+    },
     @Req() req: Request,
   ) {
-    if (!body.extractionId) {
-      throw new BadRequestException('extractionId is required');
+    // Require either extractionId or analysisId
+    if (!body.extractionId && !body.analysisId) {
+      throw new BadRequestException('Either extractionId or analysisId is required');
     }
+
     if (!body.templateId) {
       throw new BadRequestException('templateId is required');
     }
@@ -308,11 +593,18 @@ export class ThesisController {
     // Extract user ID
     const userId = this.extractUserId(req);
 
+    // Determine which ID to use (prefer analysisId for new flow)
+    const id = body.analysisId || body.extractionId!;
+    const isAnalysis = !!body.analysisId;
+
+    this.logger.log(`Rendering from ${isAnalysis ? 'analysis' : 'extraction'}: ${id}`);
+
     const job = await this.thesisService.renderFromExtraction(
-      body.extractionId,
+      id,
       body.templateId,
       userId,
       body.document,
+      isAnalysis,
     );
 
     return {
