@@ -9,6 +9,7 @@ import { ReferenceFormatterService } from '../reference/reference-formatter.serv
 import { JobService } from '../job/job.service';
 import { Job, JobStatus } from '../job/entities/job.entity';
 import { TemplateService } from '../template/template.service';
+import { LatexTemplate } from '../template/entities/template.entity';
 import { LatexService } from '../latex/latex.service';
 import { AnalysisService } from './analysis.service';
 import {
@@ -96,8 +97,11 @@ export class ThesisService {
       text = fileBuffer.toString('utf-8');
     }
 
+    // Get template for template-aware extraction
+    const template = this.templateService.findOne(templateId);
+
     // Parse content with LLM
-    const document = await this.parseContent(text, format, images, userToken, model);
+    const document = await this.parseContent(text, format, images, userToken, model, template);
 
     // Create job for async LaTeX rendering
     const job = await this.jobService.createJob(templateId, document, userId);
@@ -112,6 +116,7 @@ export class ThesisService {
    * Parse content to structured document
    * @param userToken 用户 JWT token（Gateway 模式需要）
    * @param model 指定的 LLM 模型（可选）
+   * @param template LaTeX 模板（用于模板感知字段提取）
    */
   async parseContent(
     content: string,
@@ -119,11 +124,18 @@ export class ThesisService {
     images?: Map<string, ExtractedImage>,
     userToken?: string,
     model?: string,
+    template?: LatexTemplate,
   ): Promise<Record<string, any>> {
     this.logger.log(`Parsing content with LLM...${model ? ` (model: ${model})` : ''}`);
 
     // Use LLM to parse content (returns dynamic ThesisData structure)
-    const thesisData = await this.llmService.parseThesisContent(content, userToken, model);
+    // Pass template's required fields to enable template-aware extraction
+    const thesisData = await this.llmService.parseThesisContent(
+      content,
+      userToken,
+      model,
+      template?.requiredFields,
+    );
 
     // Format references if present
     if (thesisData.references && thesisData.references.trim().length > 0) {
@@ -367,15 +379,17 @@ export class ThesisService {
       text = fileBuffer.toString('utf-8');
     }
 
-    // Use AI parsing to extract content
+    // Get template first for template-aware extraction
+    const template = this.templateService.findOne(templateId);
+
+    // Use AI parsing to extract content with template awareness
     this.logger.log('Using AI to parse document content...');
-    const parsedDocument = await this.parseContent(text, format, images, userToken, model);
+    const parsedDocument = await this.parseContent(text, format, images, userToken, model, template);
 
     // Convert Record<string, any> to ThesisData type
     const extractedData = parsedDocument as ThesisData;
 
-    // Get template and analyze completeness against template-specific requirements
-    const template = this.templateService.findOne(templateId);
+    // Analyze completeness against template-specific requirements
     const analysis = this.analysisService.analyzeDocument(extractedData, template);
 
     // Generate analysis ID and store
@@ -767,11 +781,11 @@ export class ThesisService {
       text = fileBuffer.toString('utf-8');
     }
 
-    // Parse content with LLM
-    const document = await this.parseContent(text, format, images, userToken);
-
-    // Get template by ID
+    // Get template for template-aware extraction
     const template = this.templateService.findOne(templateId);
+
+    // Parse content with LLM
+    const document = await this.parseContent(text, format, images, userToken, undefined, template);
 
     // Render LaTeX and compile to PDF synchronously
     const jobId = uuidv4();

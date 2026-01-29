@@ -16,10 +16,13 @@ export interface ThesisMetadata {
   title: string;
   title_en?: string;
   author_name: string;
+  author_name_en?: string;      // Added for NJULife template
   student_id?: string;
   school?: string;
   major?: string;
+  major_en?: string;            // Added for NJULife template
   supervisor?: string;
+  supervisor_en?: string;       // Added for NJULife template
   date?: string;
 }
 

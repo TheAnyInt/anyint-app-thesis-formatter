@@ -1,9 +1,15 @@
 import { ContentChunk } from './content-splitter';
+import { TemplateFieldMapper } from '../template/template-field-mapper.service';
 
 /**
  * Build the prompt for processing a single content chunk
  */
-export function buildChunkPrompt(chunk: ContentChunk, hasFigureMarkers: boolean, figureIdList: string): string {
+export function buildChunkPrompt(
+  chunk: ContentChunk,
+  hasFigureMarkers: boolean,
+  figureIdList: string,
+  templateRequiredFields?: string[],
+): string {
   const isFirstChunk = chunk.chunkIndex === 0;
   const hasOnlySections = chunk.sections.length > 0 && !chunk.includesAbstract && !chunk.includesReferences && !chunk.includesAcknowledgements;
 
@@ -62,16 +68,7 @@ export function buildChunkPrompt(chunk: ContentChunk, hasFigureMarkers: boolean,
 
   // Determine which fields to request
   const metadataInstruction = isFirstChunk
-    ? `"metadata": {
-    "title": "论文完整标题（中文）- 通常是封面最醒目的文字",
-    "title_en": "英文标题（如有）",
-    "author_name": "作者真实姓名（不要包含'作者'、'姓名'等标签文字）",
-    "student_id": "学号（纯数字）",
-    "school": "学院/院系全称（不要包含'学院'等标签）",
-    "major": "专业全称",
-    "supervisor": "导师姓名（可包含职称如'张三 教授'）",
-    "date": "日期（如'2024年5月'）"
-  }
+    ? `${buildMetadataInstructionForTemplate(templateRequiredFields)}
 
   **元数据提取重要提示：**
   - 元数据通常位于文档开头的封面或扉页（前1-3页）
@@ -80,6 +77,7 @@ export function buildChunkPrompt(chunk: ContentChunk, hasFigureMarkers: boolean,
   - 导师：标注"导师"、"指导教师"、"Supervisor"、"Advisor"等
   - 不要将标签文字（如"作者："、"指导教师："）作为值，只提取实际内容
   - 如果某字段不存在，返回空字符串 ""
+  ${templateRequiredFields && templateRequiredFields.length > 0 ? `- **【模板必需字段】**：${templateRequiredFields.join(', ')} - 这些字段是当前模板必需的，请特别注意提取` : ''}
 
   **摘要和关键词提取重要提示：**
   - 中文摘要：通常在封面/扉页之后，标题为"摘要"、"摘 要"
@@ -174,4 +172,61 @@ PDF提取的表格用 [TABLE_START]...[TABLE_END] 标记，每个单元格用 [T
 ${figureInstructions}
 内容片段：
 ${contentToProcess}`;
+}
+
+/**
+ * Build metadata instruction for template-aware extraction
+ * @param templateRequiredFields - Template required fields (from template.requiredFields)
+ * @returns Metadata instruction string for prompt
+ */
+function buildMetadataInstructionForTemplate(templateRequiredFields?: string[]): string {
+  // Base fields (always extract these)
+  const baseFields: Record<string, string> = {
+    title: '论文完整标题（中文）- 通常是封面最醒目的文字',
+    author_name: '作者真实姓名（不要包含\'作者\'、\'姓名\'等标签文字）',
+  };
+
+  // Optional fields with descriptions
+  const optionalFields: Record<string, string> = {
+    title_en: '英文标题（如有）',
+    author_name_en: '作者英文名（如有）',    // Added for NJULife template
+    student_id: '学号（纯数字）',
+    school: '学院/院系全称（不要包含\'学院\'等标签）',
+    major: '专业全称',
+    major_en: '专业英文名称（如有）',        // Added for NJULife template
+    supervisor: '导师姓名（可包含职称如\'张三 教授\'）',
+    supervisor_en: '导师英文名（如有）',     // Added for NJULife template
+    date: '日期（如\'2024年5月\'）',
+  };
+
+  // If no templateRequiredFields specified, return all fields (backward compatible)
+  if (!templateRequiredFields || templateRequiredFields.length === 0) {
+    const allFields = { ...baseFields, ...optionalFields };
+    const fieldEntries = Object.entries(allFields)
+      .map(([key, desc]) => `    "${key}": "${desc}"`)
+      .join(',\n');
+    return `"metadata": {\n${fieldEntries}\n  }`;
+  }
+
+  // Use TemplateFieldMapper to map template fields to ThesisData fields
+  const mapper = new TemplateFieldMapper();
+  const mappedFields = mapper.mapTemplateFieldsToThesisData(templateRequiredFields);
+
+  // Build schema with required fields
+  const schema: Record<string, string> = { ...baseFields };
+
+  // Add mapped required fields
+  mappedFields.forEach(field => {
+    const fieldName = field.replace('metadata.', '');
+    if (optionalFields[fieldName]) {
+      schema[fieldName] = `【必需】${optionalFields[fieldName]}`;
+    }
+  });
+
+  // Generate field entries
+  const fieldEntries = Object.entries(schema)
+    .map(([key, desc]) => `    "${key}": "${desc}"`)
+    .join(',\n');
+
+  return `"metadata": {\n${fieldEntries}\n  }`;
 }

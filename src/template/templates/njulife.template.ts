@@ -90,11 +90,11 @@ export const njulifeTemplate = {
 \\newcommand{\\thesistitle}{ {{#title}}{{title}}{{/title}}{{^title}}{{#metadata}}{{title}}{{/metadata}}{{/title}} }
 \\newcommand{\\thesistitleen}{ {{#titleEn}}{{titleEn}}{{/titleEn}}{{^titleEn}}{{#metadata}}{{title_en}}{{/metadata}}{{/titleEn}} }
 \\newcommand{\\authorname}{ {{#author}}{{author}}{{/author}}{{^author}}{{#metadata}}{{author_name}}{{/metadata}}{{/author}} }
-\\newcommand{\\authornameen}{ {{#authorEn}}{{authorEn}}{{/authorEn}}{{^authorEn}}{{#metadata}}{{author_name}}{{/metadata}}{{/authorEn}} }
+\\newcommand{\\authornameen}{ {{#authorEn}}{{authorEn}}{{/authorEn}}{{^authorEn}}{{#metadata}}{{author_name_en}}{{/metadata}}{{/authorEn}} }
 \\newcommand{\\majorname}{ {{#major}}{{major}}{{/major}}{{^major}}{{#metadata}}{{major}}{{/metadata}}{{/major}} }
-\\newcommand{\\majornameen}{ {{#majorEn}}{{majorEn}}{{/majorEn}}{{^majorEn}}{{#metadata}}{{major}}{{/metadata}}{{/majorEn}} }
+\\newcommand{\\majornameen}{ {{#majorEn}}{{majorEn}}{{/majorEn}}{{^majorEn}}{{#metadata}}{{major_en}}{{/metadata}}{{/majorEn}} }
 \\newcommand{\\supervisorname}{ {{#supervisor}}{{supervisor}}{{/supervisor}}{{^supervisor}}{{#metadata}}{{supervisor}}{{/metadata}}{{/supervisor}} }
-\\newcommand{\\supervisornameen}{ {{#supervisorEn}}{{supervisorEn}}{{/supervisorEn}}{{^supervisorEn}}{{#metadata}}{{supervisor}}{{/metadata}}{{/supervisorEn}} }
+\\newcommand{\\supervisornameen}{ {{#supervisorEn}}{{supervisorEn}}{{/supervisorEn}}{{^supervisorEn}}{{#metadata}}{{supervisor_en}}{{/metadata}}{{/supervisorEn}} }
 \\newcommand{\\supervisortitle}{ {{#supervisorTitle}}{{supervisorTitle}}{{/supervisorTitle}}{{^supervisorTitle}}教授{{/supervisorTitle}} }
 \\newcommand{\\studentid}{ {{#studentId}}{{studentId}}{{/studentId}}{{^studentId}}{{#metadata}}{{student_id}}{{/metadata}}{{/studentId}} }
 \\newcommand{\\researchdirection}{ {{#researchDirection}}{{researchDirection}}{{/researchDirection}} }

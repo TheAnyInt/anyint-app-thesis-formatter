@@ -77,25 +77,40 @@ export class LlmService {
    * @param content 论文文本内容
    * @param userToken 用户 JWT token（Gateway 模式需要）
    * @param model 指定的 LLM 模型（可选，默认使用配置的模型）
+   * @param templateRequiredFields 模板必需字段列表（用于模板感知提取）
    */
-  async parseThesisContent(content: string, userToken?: string, model?: string): Promise<ThesisData> {
+  async parseThesisContent(
+    content: string,
+    userToken?: string,
+    model?: string,
+    templateRequiredFields?: string[],
+  ): Promise<ThesisData> {
     const resolvedModel = model || this.modelConfigService.getDefaultModel();
     this.logger.log(`Parsing thesis content with LLM (model: ${resolvedModel})... (${content.length} characters)`);
 
+    if (templateRequiredFields && templateRequiredFields.length > 0) {
+      this.logger.log(`Template-aware extraction for fields: ${templateRequiredFields.join(', ')}`);
+    }
+
     // Route to appropriate processing method based on content length
     if (content.length < LONG_CONTENT_THRESHOLD) {
-      return this.parseThesisContentSingleCall(content, userToken, resolvedModel);
+      return this.parseThesisContentSingleCall(content, userToken, resolvedModel, templateRequiredFields);
     } else {
       this.logger.log(`Content exceeds ${LONG_CONTENT_THRESHOLD} chars, using two-phase processing`);
-      return this.parseThesisContentMultiPhase(content, userToken, resolvedModel);
+      return this.parseThesisContentMultiPhase(content, userToken, resolvedModel, templateRequiredFields);
     }
   }
 
   /**
    * Single-call processing for short documents (original implementation)
    */
-  private async parseThesisContentSingleCall(content: string, userToken?: string, model?: string): Promise<ThesisData> {
-    const prompt = this.buildPrompt(content);
+  private async parseThesisContentSingleCall(
+    content: string,
+    userToken?: string,
+    model?: string,
+    templateRequiredFields?: string[],
+  ): Promise<ThesisData> {
+    const prompt = this.buildPrompt(content, templateRequiredFields);
 
     try {
       const resultText = await this.makeLlmCall(prompt, userToken, 16000, model);
@@ -107,7 +122,7 @@ export class LlmService {
       this.logger.log('LLM response received, parsing JSON...');
       const parsedData = JSON.parse(resultText);
 
-      const thesisData = this.validateAndNormalize(parsedData);
+      const thesisData = this.validateAndNormalize(parsedData, templateRequiredFields);
       this.logger.log(
         `Thesis parsed: ${thesisData.sections.length} sections extracted`,
       );
@@ -126,7 +141,12 @@ export class LlmService {
    * Phase 1: Extract document structure
    * Phase 2: Process sections in parallel
    */
-  private async parseThesisContentMultiPhase(content: string, userToken?: string, model?: string): Promise<ThesisDataWithWarnings> {
+  private async parseThesisContentMultiPhase(
+    content: string,
+    userToken?: string,
+    model?: string,
+    templateRequiredFields?: string[],
+  ): Promise<ThesisDataWithWarnings> {
     try {
       // Phase 1: Extract document structure
       this.logger.log('Phase 1: Extracting document structure...');
@@ -148,7 +168,7 @@ export class LlmService {
 
       // Phase 2: Process chunks in parallel
       this.logger.log('Phase 2: Processing chunks in parallel...');
-      const results = await this.processChunksInParallel(chunks, content, userToken, model);
+      const results = await this.processChunksInParallel(chunks, content, userToken, model, templateRequiredFields);
 
       // Merge results
       this.logger.log('Merging chunk results...');
@@ -379,6 +399,7 @@ export class LlmService {
     originalContent: string,
     userToken?: string,
     model?: string,
+    templateRequiredFields?: string[],
   ): Promise<ChunkProcessingResult[]> {
     // Check for figure markers in original content
     const hasFigureMarkers = /\[FIGURE:(docximg|pdfimg)\d+\]/.test(originalContent);
@@ -389,7 +410,7 @@ export class LlmService {
 
     // Process all chunks in parallel
     const promises = chunks.map((chunk) =>
-      this.processChunkWithRetry(chunk, hasFigureMarkers, figureIdList, userToken, model),
+      this.processChunkWithRetry(chunk, hasFigureMarkers, figureIdList, userToken, model, templateRequiredFields),
     );
 
     return Promise.all(promises);
@@ -404,6 +425,7 @@ export class LlmService {
     figureIdList: string,
     userToken?: string,
     model?: string,
+    templateRequiredFields?: string[],
   ): Promise<ChunkProcessingResult> {
     let lastError: Error | null = null;
 
@@ -415,7 +437,7 @@ export class LlmService {
           await delay(delayMs);
         }
 
-        const prompt = buildChunkPrompt(chunk, hasFigureMarkers, figureIdList);
+        const prompt = buildChunkPrompt(chunk, hasFigureMarkers, figureIdList, templateRequiredFields);
         const response = await this.makeLlmCall(prompt, userToken, 16000, model);
 
         if (!response) {
@@ -489,7 +511,7 @@ export class LlmService {
     }
   }
 
-  private buildPrompt(content: string): string {
+  private buildPrompt(content: string, templateRequiredFields?: string[]): string {
     // Truncate content if too long to avoid context issues
     const maxContentLength = 50000;
     let truncatedContent = content;
@@ -536,18 +558,26 @@ export class LlmService {
 `
       : '';
 
-    return `请从以下论文内容中提取结构化信息。**按原文实际结构提取，不要预设或强制套用固定的章节名称。**
+    const templateFieldsNote = templateRequiredFields && templateRequiredFields.length > 0
+      ? `\n**【模板必需字段】**\n当前模板特别需要以下字段，请务必仔细提取：${templateRequiredFields.join(', ')}\n如果文档中没有这些信息，返回空字符串，但必须包含这些字段。\n`
+      : '';
 
+    return `请从以下论文内容中提取结构化信息。**按原文实际结构提取，不要预设或强制套用固定的章节名称。**
+${templateFieldsNote}
 **【重要】元数据提取**
 论文封面/扉页（通常在文档开头）包含关键元数据，请仔细查找：
 
 | 字段 | 常见标签 | 示例值 |
 |------|----------|--------|
 | title | 论文题目、题目 | "基于深度学习的图像识别研究" |
+| title_en | 英文标题、Title | "Research on Image Recognition" |
 | author_name | 作者、姓名、学生 | "张三" (不是 "作者：张三") |
+| author_name_en | 作者英文名、Author | "Zhang San" |
 | supervisor | 导师、指导教师、Supervisor | "李四 教授" |
+| supervisor_en | 导师英文名、Supervisor | "Prof. Li" |
 | school | 学院、院系、Department | "计算机科学与技术学院" |
 | major | 专业、Major | "计算机科学与技术" |
+| major_en | 专业英文名、Major | "Computer Science" |
 | student_id | 学号、Student ID | "2020123456" |
 | date | 日期、Date | "2024年5月" |
 
@@ -611,18 +641,34 @@ ${figureInstructions}
 ${truncatedContent}`;
   }
 
-  private validateAndNormalize(data: any): ThesisData {
-    // Initialize with defaults
+  private validateAndNormalize(data: any, templateRequiredFields?: string[]): ThesisData {
+    // Initialize with base required fields (always present)
     const metadata: ThesisMetadata = {
       title: data.metadata?.title?.trim() || '',
-      title_en: data.metadata?.title_en?.trim() || undefined,
       author_name: data.metadata?.author_name?.trim() || '',
-      student_id: data.metadata?.student_id?.trim() || undefined,
-      school: data.metadata?.school?.trim() || undefined,
-      major: data.metadata?.major?.trim() || undefined,
-      supervisor: data.metadata?.supervisor?.trim() || undefined,
-      date: data.metadata?.date?.trim() || undefined,
     };
+
+    // If template specifies required fields, ensure they're included (even if null)
+    if (templateRequiredFields && templateRequiredFields.length > 0) {
+      const { TemplateFieldMapper } = require('../template/template-field-mapper.service');
+      const mapper = new TemplateFieldMapper();
+      const mappedFields = mapper.mapTemplateFieldsToThesisData(templateRequiredFields);
+
+      mappedFields.forEach((field: string) => {
+        const [section, fieldName] = field.split('.');
+        if (section === 'metadata' && fieldName !== 'title' && fieldName !== 'author_name') {
+          (metadata as any)[fieldName] = data.metadata?.[fieldName]?.trim() || null;
+        }
+      });
+    } else {
+      // Backward compatibility mode: return all standard fields
+      metadata.title_en = data.metadata?.title_en?.trim() || null;
+      metadata.student_id = data.metadata?.student_id?.trim() || null;
+      metadata.school = data.metadata?.school?.trim() || null;
+      metadata.major = data.metadata?.major?.trim() || null;
+      metadata.supervisor = data.metadata?.supervisor?.trim() || null;
+      metadata.date = data.metadata?.date?.trim() || null;
+    }
 
     // Parse sections array
     const sections: Section[] = [];
@@ -643,12 +689,12 @@ ${truncatedContent}`;
     const normalized: ThesisData = {
       metadata,
       sections,
-      abstract: data.abstract?.trim() || undefined,
-      abstract_en: data.abstract_en?.trim() || undefined,
-      keywords: data.keywords?.trim() || undefined,
-      keywords_en: data.keywords_en?.trim() || undefined,
-      references: data.references?.trim() || undefined,
-      acknowledgements: data.acknowledgements?.trim() || undefined,
+      abstract: data.abstract?.trim() || null,
+      abstract_en: data.abstract_en?.trim() || null,
+      keywords: data.keywords?.trim() || null,
+      keywords_en: data.keywords_en?.trim() || null,
+      references: data.references?.trim() || null,
+      acknowledgements: data.acknowledgements?.trim() || null,
     };
 
     return normalized;

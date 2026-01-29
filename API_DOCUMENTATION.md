@@ -56,8 +56,16 @@ model: "gpt-4o"                # Optional: LLM model (default: gpt-4o)
   "extractedData": {
     "metadata": {
       "title": "Extracted or empty",
+      "title_en": "Extracted or empty (if available)",
       "author_name": "Extracted or empty",
+      "author_name_en": "Extracted or empty (for NJULife template)",
+      "student_id": "Extracted or empty",
+      "school": "Extracted or empty",
+      "major": "Extracted or empty",
+      "major_en": "Extracted or empty (for NJULife template)",
       "supervisor": "Extracted or empty",
+      "supervisor_en": "Extracted or empty (for NJULife template)",
+      "date": "Extracted or empty",
       ...
     },
     "abstract": "Extracted or empty",
@@ -528,6 +536,25 @@ Current supported templates:
 - `njuthesis` - Nanjing University Official (v1.4.3)
 - `scut` - South China University of Technology
 - `hunnu` - Hunan Normal University
+
+### Template Field Requirements
+
+Each template has specific field requirements. The system automatically maps template-specific field names to standardized ThesisData fields:
+
+| Template | Required Fields | Special Field Mappings |
+|----------|----------------|------------------------|
+| **HUNNU** | title, titleEn, author, major, advisor, college, studentId | `advisor` → `supervisor`<br>`college` → `school` |
+| **THU** | title, author, major, supervisor | (standard fields) |
+| **NJULife** | title, titleEn, author, authorEn, major, majorEn, supervisor, supervisorEn | `authorEn` → `author_name_en`<br>`majorEn` → `major_en`<br>`supervisorEn` → `supervisor_en` |
+| **NJULife-2** | title, titleEn, author, major, supervisor | (standard fields) |
+| **NJUThesis** | title, titleEn, author, major, supervisor | (standard fields) |
+| **SCUT** | title, titleEn, author, major, supervisor, department | `department` → `school` |
+
+**Note**: The API automatically handles field name variations. For example:
+- When you upload to HUNNU template, the AI extracts `advisor` and stores it as `supervisor`
+- When you upload to NJULife template, the AI extracts `authorEn`, `majorEn`, `supervisorEn` and stores them as `author_name_en`, `major_en`, `supervisor_en`
+
+This ensures consistent data structure across all templates while respecting each template's unique terminology.
 
 ---
 

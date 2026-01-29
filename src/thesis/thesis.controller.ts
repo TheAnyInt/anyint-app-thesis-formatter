@@ -202,7 +202,7 @@ export class ThesisController {
   @ApiOperation({
     summary: 'Analyze document against template with AI',
     description:
-      'Extract content from document using AI and analyze completeness against template requirements. Returns analysis with suggestions for what to generate. Different templates produce different analysis results based on their specific requirements.',
+      'Extract content from document using AI and analyze completeness against template requirements. Returns analysis with suggestions for what to generate. Different templates produce different analysis results based on their specific requirements.\n\n**Template-Aware Field Mapping**: The API automatically maps template-specific field names to standardized fields. For example:\n- HUNNU: `advisor` → `supervisor`, `college` → `school`\n- NJULife: `authorEn` → `author_name_en`, `majorEn` → `major_en`, `supervisorEn` → `supervisor_en`\n- SCUT: `department` → `school`',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -216,8 +216,9 @@ export class ThesisController {
         },
         templateId: {
           type: 'string',
-          description: 'Template ID to analyze against (e.g., njulife-2, thu)',
+          description: 'Template ID to analyze against',
           example: 'njulife-2',
+          enum: ['hunnu', 'thu', 'njulife', 'njulife-2', 'njuthesis', 'scut'],
         },
         model: {
           type: 'string',
@@ -230,17 +231,83 @@ export class ThesisController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Analysis complete',
+    description: 'Analysis complete with template-aware field extraction',
     schema: {
+      type: 'object',
       properties: {
-        analysisId: { type: 'string' },
-        extractedData: { type: 'object' },
-        templateRequirements: { type: 'object' },
-        analysis: { type: 'object' },
-        model: { type: 'string' },
-        images: { type: 'array' },
-        createdAt: { type: 'string' },
-        expiresAt: { type: 'string' },
+        analysisId: { type: 'string', description: 'Unique analysis ID (expires in 1 hour)' },
+        extractedData: {
+          type: 'object',
+          description: 'Extracted thesis data with standardized field names',
+          properties: {
+            metadata: {
+              type: 'object',
+              description: 'Thesis metadata (field names vary by template)',
+              properties: {
+                title: { type: 'string', description: 'Thesis title (Chinese)' },
+                title_en: { type: 'string', description: 'English title (if available)' },
+                author_name: { type: 'string', description: 'Author name (Chinese)' },
+                author_name_en: { type: 'string', description: 'Author English name (for NJULife template)' },
+                student_id: { type: 'string', description: 'Student ID (if available)' },
+                school: { type: 'string', description: 'School/Department (mapped from college/department/institute)' },
+                major: { type: 'string', description: 'Major (Chinese)' },
+                major_en: { type: 'string', description: 'Major English name (for NJULife template)' },
+                supervisor: { type: 'string', description: 'Supervisor name (mapped from advisor for HUNNU)' },
+                supervisor_en: { type: 'string', description: 'Supervisor English name (for NJULife template)' },
+                date: { type: 'string', description: 'Thesis date (if available)' },
+              },
+            },
+            abstract: { type: 'string', description: 'Chinese abstract' },
+            abstract_en: { type: 'string', description: 'English abstract' },
+            keywords: { type: 'string', description: 'Chinese keywords' },
+            keywords_en: { type: 'string', description: 'English keywords' },
+            sections: {
+              type: 'array',
+              description: 'Thesis body sections',
+              items: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string' },
+                  content: { type: 'string' },
+                  level: { type: 'number', enum: [1, 2, 3] },
+                },
+              },
+            },
+            references: { type: 'string', description: 'References section' },
+            acknowledgements: { type: 'string', description: 'Acknowledgements section' },
+          },
+        },
+        templateRequirements: {
+          type: 'object',
+          properties: {
+            requiredFields: { type: 'array', items: { type: 'string' } },
+            requiredSections: { type: 'array', items: { type: 'string' } },
+          },
+        },
+        analysis: {
+          type: 'object',
+          description: 'Completeness analysis and suggestions',
+          properties: {
+            completeness: { type: 'object' },
+            suggestions: { type: 'array', items: { type: 'string' } },
+          },
+        },
+        model: { type: 'string', description: 'LLM model used for analysis' },
+        images: {
+          type: 'array',
+          description: 'Extracted images from document',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              filename: { type: 'string' },
+              contentType: { type: 'string' },
+              url: { type: 'string' },
+            },
+          },
+        },
+        createdAt: { type: 'string', format: 'date-time' },
+        expiresAt: { type: 'string', format: 'date-time', description: 'Analysis expires after 1 hour' },
       },
     },
   })

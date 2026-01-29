@@ -21,6 +21,9 @@ The 3-step thesis formatting workflow has been **fully implemented, tested, and 
 
 ### 🔧 Technical
 - **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - Technical implementation details
+- **[FIELD_MAPPING_IMPLEMENTATION.md](./FIELD_MAPPING_IMPLEMENTATION.md)** - 🆕 Template field mapping details
+- **[TESTING_GUIDE.md](./TESTING_GUIDE.md)** - 🆕 Testing guide for field mapping
+- **[SWAGGER_UPDATE_SUMMARY.md](./SWAGGER_UPDATE_SUMMARY.md)** - 🆕 Swagger/OpenAPI documentation update
 - **[COMPLETION_REPORT.md](./COMPLETION_REPORT.md)** - Project completion report
 - **[FINAL_SUMMARY.md](./FINAL_SUMMARY.md)** - Executive summary
 
@@ -46,6 +49,14 @@ The 3-step thesis formatting workflow has been **fully implemented, tested, and 
 ---
 
 ## ✨ What's New
+
+### 🆕 Template-Aware Field Mapping (2026-01-29)
+Complete field mapping support for all 6 templates with intelligent field extraction:
+- ✅ **Smart field mapping** (advisor→supervisor, college→school, etc.)
+- ✅ **NJULife English fields** (author_name_en, major_en, supervisor_en)
+- ✅ **Template-specific extraction** (LLM knows what each template needs)
+- ✅ **100% backward compatible** (existing code unchanged)
+- 📖 See [FIELD_MAPPING_IMPLEMENTATION.md](./FIELD_MAPPING_IMPLEMENTATION.md) for details
 
 ### 🆕 AI-Powered Analysis (2026-01-29)
 The `/thesis/analyze` endpoint now uses **AI for intelligent content extraction**:
