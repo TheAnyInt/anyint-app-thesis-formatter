@@ -254,17 +254,23 @@ export class LatexService {
       prepared.keywordsEn = this.escapeLatex(document.keywords_en);
     }
 
-    // Convert references string to array format for templates
+    // Provide references in both formats for template compatibility
+    // - references: string (for templates like THU that output raw text)
+    // - referencesArray: array (for templates like HUNNU that iterate with {{key}}/{{citation}})
     if (document.references && typeof document.references === 'string') {
+      // Keep the original string format
+      // (already LaTeX-escaped by prepareDocumentData's string handling)
+
+      // Also provide array format for templates that need structured iteration
       const refsArray = this.parseReferencesToArray(document.references);
       if (refsArray.length > 0) {
-        prepared.references = refsArray;
-        prepared.hasReferences = true;
+        prepared.referencesArray = refsArray;
       }
     }
 
     // Add has* boolean flags for conditional rendering
     prepared.hasConclusion = !!document.conclusion;
+    prepared.hasReferences = !!document.references;
     prepared.hasAcknowledgements = !!document.acknowledgements;
     prepared.hasAppendix = !!document.appendix;
 

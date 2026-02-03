@@ -284,10 +284,10 @@ number={\\chinese{section}}
 \\begin{thebibliography}{99}
 \\setlength{\\itemsep}{-0.75ex}
 \\addcontentsline{toc}{section}{参考文献}
-{{#references}}
+{{#referencesArray}}
 \\bibitem{ {{key}} }
 {{{citation}}}
-{{/references}}
+{{/referencesArray}}
 \\end{thebibliography}
 \\end{center}
 }

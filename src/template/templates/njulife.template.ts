@@ -352,10 +352,10 @@ export const njulifeTemplate = {
 %% ==================== 参考文献 ====================
 \\addcontentsline{toc}{chapter}{参考文献}
 \\begin{thebibliography}{99}
-{{#references}}
+{{#referencesArray}}
 \\bibitem{ {{key}} }
 {{{citation}}}
-{{/references}}
+{{/referencesArray}}
 \\end{thebibliography}
 
 {{#hasAppendix}}

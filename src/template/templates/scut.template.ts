@@ -403,10 +403,10 @@ $\\Box$不保密,同意在校园网上发布，供校内师生和与学校有共
 \\chapter*{参考文献}
 \\addcontentsline{toc}{chapter}{参考文献}
 \\begin{thebibliography}{99}
-{{#references}}
+{{#referencesArray}}
 \\bibitem{ {{key}} }
 {{{citation}}}
-{{/references}}
+{{/referencesArray}}
 \\end{thebibliography}
 
 {{#hasPublications}}

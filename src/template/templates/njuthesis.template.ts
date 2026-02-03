@@ -216,15 +216,15 @@ export const njuthesisTemplate = {
 \\printbibliography
 {{/hasReferences}}
 {{^hasReferences}}
-{{#references}}
+{{#referencesArray}}
 % 手动参考文献 (无 .bib 文件时)
 \\begin{thebibliography}{99}
-{{#references}}
+{{#referencesArray}}
 \\bibitem{ {{key}} }
 {{{citation}}}
-{{/references}}
+{{/referencesArray}}
 \\end{thebibliography}
-{{/references}}
+{{/referencesArray}}
 {{/hasReferences}}
 
 {{#hasAcknowledgements}}
