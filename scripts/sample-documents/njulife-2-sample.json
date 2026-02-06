@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "title": "论文标题",
+    "title_en": "Thesis Title",
+    "author_name": "作者姓名",
+    "major": "专业名称",
+    "supervisor": "导师姓名",
+    "student_id": "MG2012346"
+  },
+  "abstract": "中文摘要内容。",
+  "keywords": "关键词1; 关键词2",
+  "abstract_en": "English abstract content.",
+  "keywords_en": "Keyword 1; Keyword 2",
+  "sections": [
+    {
+      "title": "绪论",
+      "content": "章节内容。",
+      "level": 1
+    }
+  ],
+  "references": "[1] 参考文献",
+  "acknowledgements": "致谢内容。"
+}

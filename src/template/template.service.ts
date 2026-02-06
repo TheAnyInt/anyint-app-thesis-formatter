@@ -19,57 +19,78 @@ export class TemplateService implements OnModuleInit {
   }
 
   private loadBuiltInTemplates() {
+    const fs = require('fs');
+    const path = require('path');
+
+    // Helper to check and populate thumbnail metadata
+    const addThumbnailMetadata = (template: LatexTemplate): LatexTemplate => {
+      const thumbnailPath = path.join(
+        process.cwd(),
+        'public',
+        'thumbnails',
+        'templates',
+        `${template.id}.png`,
+      );
+      const hasThumbnail = fs.existsSync(thumbnailPath);
+
+      return {
+        ...template,
+        hasThumbnail,
+        thumbnailUrl: hasThumbnail ? `/templates/${template.id}/thumbnail` : undefined,
+      };
+    };
+
     // Load NJU Life Sciences template
-    const njulife: LatexTemplate = {
+    const njulife: LatexTemplate = addThumbnailMetadata({
       ...njulifeTemplate,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
+    });
     this.templates.set(njulife.id, njulife);
     this.logger.log(`Loaded built-in template: ${njulife.name} (${njulife.id})`);
 
     // Load NJU Life Sciences template v2
-    const njulife2: LatexTemplate = {
+    const njulife2: LatexTemplate = addThumbnailMetadata({
       ...njulife2Template,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
+    });
     this.templates.set(njulife2.id, njulife2);
     this.logger.log(`Loaded built-in template: ${njulife2.name} (${njulife2.id})`);
 
     // Load Tsinghua University template
-    const thu: LatexTemplate = {
+    const thu: LatexTemplate = addThumbnailMetadata({
       ...thuTemplate,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
+    });
     this.templates.set(thu.id, thu);
     this.logger.log(`Loaded built-in template: ${thu.name} (${thu.id})`);
 
     // Load NJU official njuthesis template (v1.4.3)
-    const njuthesis: LatexTemplate = {
+    const njuthesis: LatexTemplate = addThumbnailMetadata({
       ...njuthesisTemplate,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
+    });
     this.templates.set(njuthesis.id, njuthesis);
     this.logger.log(`Loaded built-in template: ${njuthesis.name} (${njuthesis.id})`);
 
     // Load SCUT thesis template
-    const scut: LatexTemplate = {
+    const scut: LatexTemplate = addThumbnailMetadata({
       ...scutTemplate,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
+    });
     this.templates.set(scut.id, scut);
     this.logger.log(`Loaded built-in template: ${scut.name} (${scut.id})`);
 
     // Load HUNNU bachelor thesis template
-    const hunnu: LatexTemplate = {
+    const hunnu: LatexTemplate = addThumbnailMetadata({
       ...hunnuTemplate,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
+    });
     this.templates.set(hunnu.id, hunnu);
     this.logger.log(`Loaded built-in template: ${hunnu.name} (${hunnu.id})`);
   }

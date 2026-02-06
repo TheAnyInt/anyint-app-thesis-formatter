@@ -29,6 +29,9 @@ output/
 *.pdf
 !templates/**/*.pdf
 
+# Thumbnails - ignore runtime-generated custom thumbnails
+public/thumbnails/custom/
+
 # Temp files
 .~*
 /temp/

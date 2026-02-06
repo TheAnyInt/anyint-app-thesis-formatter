@@ -7,6 +7,8 @@ export interface LatexTemplate {
   requiredFields: string[];
   requiredSections: string[];
   assets?: string[]; // 需要复制到编译目录的资源文件 (如 cover.pdf, 字体文件等)
+  thumbnailUrl?: string; // URL to thumbnail preview image
+  hasThumbnail?: boolean; // Whether thumbnail has been generated
   createdAt: Date;
   updatedAt: Date;
 }

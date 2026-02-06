@@ -50,6 +50,8 @@ export class TemplateController {
           description: t.description,
           requiredFields: t.requiredFields,
           requiredSections: t.requiredSections,
+          thumbnailUrl: t.thumbnailUrl,
+          hasThumbnail: t.hasThumbnail,
         })),
       };
     }
@@ -61,6 +63,8 @@ export class TemplateController {
         description: t.description,
         requiredFields: t.requiredFields,
         requiredSections: t.requiredSections,
+        thumbnailUrl: t.thumbnailUrl,
+        hasThumbnail: t.hasThumbnail,
       })),
     };
   }
